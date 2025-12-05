@@ -163,8 +163,10 @@ Deploy lakeFS to the `lakeFS` project:
 $ helm install my-lakefs lakefs/lakefs
 ```
 
-ISSUE: For now, we have to make the following modification to the `my-lakefs` deployment:
+ISSUE: For now, we have to make the following modification to the `my-lakefs` deployment. Use the command below to edit the deployment and add the volume and volume mount below to the exiting configuration.
 ```
+$ oc edit deploy/my-lakefs
+
 volumeMounts:
   - name: lakefs-volume
     mountpath: /lakefs
