@@ -96,7 +96,7 @@ If you know it only works in a specific version, say so.
 This quickstart was tested with the following software versions:
 
 | Software                           | Version  |
-| ---------------------------------- |:--------:|
+| ---------------------------------- |:---------|
 | Red Hat OpenShift                  | 4.20.5   |
 | Red Hat OpenShift Service Mesh     | 2.5.11-0 |
 | Red Hat OpenShift Serverless       | 1.37.0   |
