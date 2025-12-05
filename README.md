@@ -205,6 +205,13 @@ NAME        HOST/PORT                           PATH       SERVICES    PORT   TE
 my-lakefs   lakefs.apps.<cluster_fqdn>                     my-lakefs   8000   edge          None
 ```
 
+Use the route to access the lakeFS browser-base UI. 
+
+1. Leave the username set to `admin`
+2. Enter your email address (or a bogus email address)
+3. Download the `access_key_id` and `secret_access_key` displayed on the new page, as they will not be accessible later on
+4. Go back to the login page and log in using those credentials.
+
 ### Delete
 
 <!-- CONTRIBUTOR TODO: add uninstall instructions
