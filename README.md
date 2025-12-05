@@ -93,6 +93,17 @@ Be specific. Don't say "OpenShift AI". Instead, tested with OpenShift AI 2.22
 If you know it only works in a specific version, say so. 
 
 -->
+This quickstart was tested with the following software versions:
+
+| Software                           | Version  |
+| ---------------------------------- |:--------:|
+| Red Hat OpenShift                  | 4.20.5   |
+| Red Hat OpenShift Service Mesh     | 2.5.11-0 |
+| Red Hat OpenShift Serverless       | 1.37.0   |
+| Red Hat OpenShift AI               | 2.25     |
+| helm                               | 3.17.1   |
+| lakeFS                             | 1.73.0   |
+
 
 ### Required user permissions
 
@@ -117,6 +128,80 @@ If screenshots are included, remember to put them in the
 `docs/images` folder.*
 
 -->
+The following steps assume the following pre-requisite products and components are deployed and functional, in the following order:
+
+1. Red Hat OpenShift Container Platform
+2. Red Hat OpenShift Service Mesh
+3. Red Hat OpenShift Serverless
+4. Red Hat OpenShift AI
+
+Login to the OpenShift cluster:
+```
+$ oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
+```
+
+Create a project for the lakeFS application:
+```
+$ oc new-project lakefs
+```
+
+Add the helm repo and verify the lakeFS release available:
+```
+$ helm repo add lakefs https://charts.lakefs.io
+
+$ helm repo list
+NAME  	URL                     
+lakefs	https://charts.lakefs.io
+
+$ helm list 
+NAME     	NAMESPACE        	REVISION	UPDATED                                	STATUS  	CHART        	APP VERSION
+my-lakefs	3c47b24f-lakefsai	1       	2025-12-05 13:45:59.323482412 -0500 EST	deployed	lakefs-1.7.12	1.73.0     
+```
+
+Deploy lakeFS to the `lakeFS` project:
+```
+$ helm install my-lakefs lakefs/lakefs
+```
+
+ISSUE: For now, we have to make the following modification to the `my-lakefs` deployment:
+```
+volumeMounts:
+  - name: lakefs-volume
+    mountpath: /lakefs
+
+volumes:
+  - name: lakefs-volume
+    emptyDir:
+     sizeLimit: 100Mi
+```
+
+Verify the lakeFS applicaton is running:
+```
+$ oc get all
+Warning: apps.openshift.io/v1 DeploymentConfig is deprecated in v4.14+, unavailable in v4.10000+
+NAME                             READY   STATUS    RESTARTS   AGE
+pod/my-lakefs-55486ff445-pshwj   1/1     Running   0          40m
+
+NAME                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+service/my-lakefs   ClusterIP   172.30.200.142   <none>        80/TCP    92m
+
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/my-lakefs   1/1     1            1           92m
+
+NAME                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/my-lakefs-55486ff445   1         1         1       40m
+replicaset.apps/my-lakefs-78c5f7d794   0         0         0       92m
+```
+
+Create a `route` for the lakeFS instance so that it can be accessed from outside the cluster:
+```
+$ oc create route edge my-lakefs --service my-lakefs --port 8000 --hostname lakefs.apps.<cluster_fqdn>
+route.route.openshift.io/my-lakefs created
+
+$ oc get route
+NAME        HOST/PORT                           PATH       SERVICES    PORT   TERMINATION   WILDCARD
+my-lakefs   lakefs.apps.<cluster_fqdn>                     my-lakefs   8000   edge          None
+```
 
 ### Delete
 
