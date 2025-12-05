@@ -1,4 +1,4 @@
-# [INSERT quickstart title here]
+# Data versioning for Fraud Detectin with lakeFS
 
 <!-- CONTRIBUTOR TODO: update title ^^
 
