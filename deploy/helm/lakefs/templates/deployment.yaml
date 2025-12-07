@@ -1,0 +1,136 @@
+{{- include "lakefs.checkDeprecated" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lakefs.fullname" . }}
+  labels:
+    {{- include "lakefs.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "lakefs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "lakefs.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if (.Values.image.privateRegistry).enabled }}
+      imagePullSecrets:
+       {{- if (.Values.image.privateRegistry).secretToken }}
+        - name: "docker-registry"
+       {{- else }}
+        - name: {{ .Values.image.privateRegistry.secretName }}
+       {{- end }}
+      {{- end }}
+      serviceAccountName: {{ include "lakefs.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- if .Values.lakefsConfig }}
+          args: ["run", "--config", "/etc/lakefs/config.yaml"]
+          {{- else }}
+          args: ["run"]
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "lakefs.repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.deployment.port }}
+              protocol: TCP
+          readinessProbe:
+            {{- if  ((.Values.readinessProbe).failureThreshold) }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            {{-  end }}
+            {{- if  ((.Values.readinessProbe).periodSeconds) }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            {{-  end }}
+            {{- if  ((.Values.readinessProbe).successThreshold) }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            {{-  end }}
+            {{- if  ((.Values.readinessProbe).timeoutSeconds) }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            {{-  end }}   
+            httpGet:
+              path: /_health
+              port: http
+          livenessProbe:
+            {{- if  ((.Values.livenessProbe).failureThreshold) }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            {{-  end }}
+            {{- if  ((.Values.livenessProbe).periodSeconds) }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            {{-  end }}
+            {{- if  ((.Values.livenessProbe).successThreshold) }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            {{-  end }}
+            {{- if  ((.Values.livenessProbe).timeoutSeconds) }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            {{-  end }}     
+            {{- if  ((.Values.livenessProbe).initialDelaySeconds) }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            {{-  end }}                                                
+            httpGet:
+              path: /_health
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          {{- if .Values.extraVolumeMounts }}
+            {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+          {{- if .Values.committedLocalCacheVolume }}
+            - name: committed-local-cache
+              mountPath: "/lakefs/cache"
+          {{- end }}
+          {{- if .Values.lakefsConfig }}
+            - name: config-volume
+              mountPath: /etc/lakefs/config.yaml
+              subPath: "config.yaml"
+              readOnly: true
+          {{- else }}
+            - name: {{ .Chart.Name }}-local-data
+              mountPath: "/lakefs/data"
+          {{- end }}
+          {{- if (((.Values.enterprise).auth).saml).enabled }}
+            - name: secret-volume-license-token
+              readOnly: true
+              mountPath: /etc/saml_certs/
+          {{- end }}
+          {{- if (.Values.enterprise).enabled }}
+          {{- if or (and .Values.secrets .Values.secrets.licenseContents) (and .Values.existingSecret .Values.secretKeys.licenseContentsKey) }}
+            - name: secret-volume-license-token
+              mountPath: /etc/lakefs/license.tkn
+              subPath: "license.tkn"
+              readOnly: true
+          {{- end }}
+          {{- end }}
+          {{- include "lakefs.env" . | nindent 10 }}
+        {{- include "lakefs.s3proxyContainer" . | nindent 8}}
+        {{- include "lakefs.gcpProxyContainer" . | nindent 8}}
+      volumes:
+        {{- include "lakefs.volumes" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

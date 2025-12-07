@@ -1,0 +1,206 @@
+# Default values for lakefs.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  pullPolicy: IfNotPresent
+  privateRegistry:
+    enabled: false
+    secretToken: null
+    secretName: null
+
+nameOverride: ""
+fullnameOverride: ""
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  ingressClassName: ""
+  defaultBackend: {}
+  hosts:
+    - host: chart-example.local
+      paths: []
+      # redirect to a different service based on path prefix for advanced use cases only
+      # pathsOverrides:
+      #   - path: /some/path
+      #     serviceName: other-example.local
+      #     servicePort: 80
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+podAnnotations: {}
+jobPodAnnotations:
+  sidecar.istio.io/inject: "false"
+
+deployment:
+  port: 8000
+
+service:
+  annotations: {}
+  type: ClusterIP
+  port: 80
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+## Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in.
+## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+##
+topologySpreadConstraints: []
+
+s3Fallback:
+  enabled: false
+
+gcpFallback:
+  enabled: false
+
+lakefsConfig: |
+  database:
+    type: local
+  blockstore:
+    type: local
+
+# yamllint disable rule:comments
+
+# Example: using node instance storage for caching committed data:
+# For more information: https://www.vipmind.me/infra/aws/how-to-use-ephemeral-disk-from-ec2-instance-in-eks.html
+#committedLocalCacheVolume:
+#  hostPath:
+#    path: /media/ephemeral0
+
+# yamllint enable
+
+serviceAccount: {}
+
+# to use an existing service account, replace the serviceAccount map above with the following:
+# serviceAccount:
+#   name: "my-serviceaccount"
+
+# Extra Environment Values - allows yaml definitions
+extraEnvVars:
+#  - name: VALUE_FROM_SECRET
+#    valueFrom:
+#      secretKeyRef:
+#        name: secret_name
+#        key: secret_key
+# Override K8S defaults for readinessProbe
+# readinessProbe:
+#   failureThreshold: 10
+#   periodSeconds: 5
+#   successThreshold: 4
+#   timeoutSeconds: 1
+# Override K8S defaults for livenessProbe
+# livenessProbe:
+#   failureThreshold: 20
+#   periodSeconds: 5
+#   successThreshold: 4
+#   timeoutSeconds: 1
+#   initialDelaySeconds: 5
+
+# https://docs.lakefs.io/latest/datamanagment/metadata-search/#configuration-reference
+mds:
+  enabled: false
+  image:
+    pullPolicy: IfNotPresent
+    repository: treeverse/mds
+    tag: "0.2.1"
+  extraEnvVars: {}
+  resources:
+    # limits:
+    #   cpu: 500m
+    #   memory: 256Mi
+    # requests:
+    #   cpu: 250m
+    #   memory: 128Mi
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    # failureThreshold: 10
+    # periodSeconds: 5
+    # successThreshold: 4
+    # timeoutSeconds: 1
+    # initialDelaySeconds: 5
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    # failureThreshold: 10
+    # periodSeconds: 5
+    # successThreshold: 4
+    # timeoutSeconds: 1
+    # initialDelaySeconds: 5
+  config:
+    lakefs:
+      endpoint: "https://example.lakefs.io"
+      access_key_id: "AKIAIOSFOLEXAMPLE"
+      secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    metadata_settings:
+      since: "1970-01-01T00:00:00+00"
+      max_commits: 100
+    repositories:
+      # example-repo-1:
+      #   branches:
+      #   - main
+      #   - dev
+      # example-repo-2:
+      #   branches:
+      #   - main
+      #   - feature-*
+
+# Start local postgres pod for quick start, not for production
+useDevPostgres: false
+
+# Name of existing secret to use
+existingSecret: null
+
+# Keys used for existingSecret
+secretKeys:
+  authEncryptSecretKey: auth_encrypt_secret_key
+  # Use the following to fetch PostgreSQL connection string from an existing secret:
+  databaseConnectionString: null
+  # Use to fetch license token from an existing secret:
+  licenseContentsKey: null
+  # Use the following to fetch LDAP bind password from an existing secret:
+  ldapBindPassword: null
+  # Use the following to fetch OIDC client secret from an existing secret:
+  oidcClientSecret: null
+
+# Enterprise configuration
+enterprise:
+  enabled: false
+
+  # Enterprise auth configuration
+  auth:
+    rbac:
+      enabled: true
+
+    ldap:
+      enabled: false
+      bindPassword: null
+
+    oidc:
+      enabled: false
+      clientSecret: null
+
+    saml:
+      enabled: false
+      createCertificateSecret: false
+      certificate:
+        # certificates for AD FS IDP (e.g Azure AD)
+        samlRsaPublicCert: null
+        samlRsaPrivateKey: null
+
+secrets:
+  licenseContents: null
