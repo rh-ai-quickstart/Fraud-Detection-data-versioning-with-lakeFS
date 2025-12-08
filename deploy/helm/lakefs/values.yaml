@@ -46,6 +46,12 @@ service:
   type: ClusterIP
   port: 80
 
+route:
+  annotations: {}
+  targetPort: http
+  termination: edge
+  insecureEdgeTerminationPolicy: Redirect
+
 resources: {}
 
 nodeSelector: {}
