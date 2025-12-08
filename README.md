@@ -37,15 +37,19 @@ REMEMBER: to remove this section if you don't use a TOC.
 
 ## Detailed description
 
-<!-- CONTRIBUTOR TODO: add detailed description.
+The purpose of this AI quickstart is to highlight the benefits of data versioning, provided by lakeFS, in an AI/ML environment. lakeFS allows the data engineer to manage the lifecycle of data using the same workflow a developer uses to manage source code, using git. This means that, like source code, data can be versioned, branched, merged and pulled from a git repository, although the data is actually stored in a backend object storage.
 
-This section is required. Describe the quickstart use case in more detail. 
+The quickstart will allow a demonstrator to quickly deploy both object storage, using MinIO, and lakeFS to serve as a git-like gateway that data engineers can interface with for data access. The following steps should be able to be run very quickly:
 
-This is not a technical description. This is about the workload. 
-
-Technical description comes later.
-
--->
+1. Deploy Minio for on-premesis object storage, running on the local OpenShift cluster
+2. Deploy an instance of lakeFS for git-like management of data and data versioning
+3. Deploy an fraud detection notebook in OpenShift AI
+4. Create and train a model using the notebook and data
+5. Serve the trained model
+6. Perform fraud detection on sample transactions data
+7. Update the training data and retrain the model using the new data version
+8. Perform fraud detection on a new version of the sample transaction data
+9. Show how OpenShift AI pipelines can be used to retrain and/or perform detection on new versions of training and sample data
 
 
 ### See it in action 
