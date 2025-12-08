@@ -96,6 +96,8 @@ spec:
               mountPath: /etc/lakefs/config.yaml
               subPath: "config.yaml"
               readOnly: true
+            - name: metadata-volume
+              mountPath: /lakefs
           {{- else }}
             - name: {{ .Chart.Name }}-local-data
               mountPath: "/lakefs/data"
