@@ -2,6 +2,13 @@
 
 In order to set up the environment, there are currently four steps, assuming the OpenShift cluster is already up.
 
+# Pre-requisites
+1. OpenShift cluster is deployed
+2. The `lakefs` project is created
+3. User has `admin` permissions in the `lakefs`namespace
+
+# Steps
+
 1. Deploy MinIO using the `minio-for-lakefs.yaml` file. This manifest file, when applied to the cluster, will deploy MinIO and create a random root username and password. After this step, you should be able to log into the MinIO console using the `minio-console` route and the generated crendentials stored in the secret.
 
 ```
