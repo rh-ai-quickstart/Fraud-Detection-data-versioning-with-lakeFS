@@ -11,18 +11,18 @@ oc login --token=${token} --server=${api}
 oc project lakefs
 
 # Deploy minio
-$ oc apply -f ./minio-for-lakefs.yaml
+oc apply -f ./minio-for-lakefs.yaml
 sleep 30
 
 # Create lakeFS config and storage in a config map
-$ oc apply -f ./lakefs-config-job.yaml
+oc apply -f ./lakefs-config-job.yaml
 sleep 10
 
 # Deploy lakeFS
-$ helm install my-lakefs ./helm/lakefs
+helm install my-lakefs ./helm/lakefs
 sleep 30
 
 # Create repos in lakeFS, thereby creating storage buckets in Minio
-$ oc apply -f ./lakefs-repos-job.yaml
+oc apply -f ./lakefs-repos-job.yaml
 sleep 30
 
