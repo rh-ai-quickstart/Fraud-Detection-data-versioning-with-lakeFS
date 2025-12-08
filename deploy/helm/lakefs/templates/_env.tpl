@@ -140,6 +140,9 @@ envFrom:
     items:
       - key: config.yaml
         path: config.yaml
+- name: metadata-volume
+  emptyDir:
+    sizeLimit: 100Mi
 {{- end }}
 {{- if (.Values.enterprise).enabled }}
 {{- if and .Values.existingSecret .Values.secretKeys.licenseContentsKey }}
