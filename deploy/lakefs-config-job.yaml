@@ -1,0 +1,71 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-cfg-map-lakefs
+spec:
+  selector: {}
+  template:
+    spec:
+      containers:
+        - args:
+            - -ec
+            - |-
+              echo -n 'Waiting for minio root user secret'
+              while ! oc get secret minio-root-user 2>/dev/null | grep -qF minio-root-user; do
+                echo -n .
+                sleep 5
+              done; echo
+
+              cat << EOF | oc apply -f-
+              kind: ConfigMap
+              apiVersion: v1
+              metadata:
+                name: my-lakefs
+                labels:
+                  app.kubernetes.io/managed-by: Helm
+                annotations:
+                  meta.helm.sh/release-name: my-lakefs
+                  meta.helm.sh/release-namespace: lakefs
+              data:
+                config.yaml: |
+                  logging:
+                    format: json
+                    level: WARN
+                    output: "-"
+                  database:
+                    type: "local"
+                  auth:
+                    encrypt:
+                      secret_key: "10a718b3f285d89c36e9864494cdd1507f3bc85b342df24736ea81f9a1134bcc"
+                  blockstore:
+                    type: s3
+                    s3:
+                      force_path_style: true
+                      endpoint: http://minio:9000
+                      discover_bucket_region: false
+                      credentials:
+                        access_key_id: $(MINIO_ROOT_USER)
+                        secret_access_key: $(MINIO_ROOT_PASSWORD)
+                  installation:
+                    user_name: admin
+                    access_key_id: something
+                    secret_access_key: simple
+              EOF
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-root-user
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-root-user
+                  key: MINIO_ROOT_PASSWORD
+          command:
+            - /bin/bash
+          image: image-registry.openshift-image-registry.svc:5000/openshift/tools:latest
+          imagePullPolicy: IfNotPresent
+          name: create-ds-connections
+      restartPolicy: Never
+      serviceAccountName: demo-setup
