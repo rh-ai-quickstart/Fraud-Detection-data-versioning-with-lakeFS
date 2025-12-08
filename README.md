@@ -64,11 +64,7 @@ Arcades are a great way to showcase your quickstart before installation.
 
 ### Architecture diagrams
 
-<!-- CONTRIBUTOR TODO: add architecture diagram. 
-
-*Section is required. Put images in `docs/images` folder* 
-
---> 
+![alt text](.docs/images/lakefs-arch.png "lakeFS architecture")
 
 
 ## Requirements
