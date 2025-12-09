@@ -48,18 +48,18 @@ TODO: create an arcade?
 
 ## Requirements
 
+This quickstart was developed and test on an OpenShift cluster with the following components and resources. This can be considered the minimum requirements.
 
 ### Minimum hardware requirements 
 
-<!-- CONTRIBUTOR TODO: add minimum hardware requirements
+> [!NOTE]
+> A GPU is not required for this quickstart
 
-*Section is required.* 
+| Node Type           | Qty  | vCPU   | Memory (GB) |
+| --------------------|------|-------|--------------|
+| Control Plane       | 3    | 8     | 16           |
+| Worker              | 3    | 8     | 16           |
 
-Be as specific as possible. DON'T say "GPU". Be specific.
-
-List minimum hardware requirements.
-
---> 
 
 ### Minimum software requirements
 
