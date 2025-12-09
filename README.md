@@ -52,14 +52,13 @@ This quickstart was developed and test on an OpenShift cluster with the followin
 
 ### Minimum hardware requirements 
 
-> [!NOTE]
-> A GPU is not required for this quickstart
-
 | Node Type           | Qty  | vCPU   | Memory (GB) |
 | --------------------|------|-------|--------------|
 | Control Plane       | 3    | 8     | 16           |
 | Worker              | 3    | 8     | 16           |
 
+> [!NOTE]
+> A GPU is not required for this quickstart
 
 ### Minimum software requirements
 
