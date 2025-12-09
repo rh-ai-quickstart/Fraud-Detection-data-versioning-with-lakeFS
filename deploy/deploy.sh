@@ -1,5 +1,21 @@
 #1/bin/bash
 
+# Validate a project name is included
+if [ $# -lt 1 ]; then
+    echo "Must include project to deploy to"
+    echo
+    echo "Usage: deploy.sh <project_name>"
+    echo
+    echo "Example: deploy.sh lakefs"
+    echo
+elif [ $# -gt 1 ]; then
+    echo "Too many arguments"
+    echo
+    echo "Usage: deploy.sh <project_name>"
+    echo
+    echo "Example: deploy.sh lakefs"
+    echo
+fi
 
 # Create the project if it doesn't already exist
 oc get project $1
@@ -7,9 +23,10 @@ if [ $? -eq 0 ]; then
     echo "$1 project already exists. Switching to it."
     oc project lakefs
 else
-    echo " Creating new project $1 and switching to it."
+    echo "Creating new project $1 and switching to it."
     oc new-project $1
 fi
+echo
 
 # Deploy minio
 echo "Deploying MinIO and creating storage buckets"
