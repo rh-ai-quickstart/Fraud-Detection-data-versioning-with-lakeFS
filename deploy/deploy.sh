@@ -1,22 +1,22 @@
 #1/bin/bash
 
+# Function: print usage and exit
+usage_and_exit () {
+    echo
+    echo $1
+    echo
+    echo "Usage: deploy.sh <project_name>"
+    echo
+    echo "Example: deploy.sh lakefs"
+    echo
+    exit 1
+}
+
 # Validate a project name is included
 if [ $# -lt 1 ]; then
-    echo "Must include project to deploy to"
-    echo
-    echo "Usage: deploy.sh <project_name>"
-    echo
-    echo "Example: deploy.sh lakefs"
-    echo
-    exit 1
+    usage_and_exit "Must include project to deploy to"
 elif [ $# -gt 1 ]; then
-    echo "Too many arguments"
-    echo
-    echo "Usage: deploy.sh <project_name>"
-    echo
-    echo "Example: deploy.sh lakefs"
-    echo
-    exit 1
+    usage_and_exit "Too many arguments"
 fi
 
 # Create the project if it doesn't already exist
