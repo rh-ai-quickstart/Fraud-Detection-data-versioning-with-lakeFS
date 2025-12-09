@@ -8,6 +8,7 @@ if [ $# -lt 1 ]; then
     echo
     echo "Example: deploy.sh lakefs"
     echo
+    exit 1
 elif [ $# -gt 1 ]; then
     echo "Too many arguments"
     echo
@@ -15,6 +16,7 @@ elif [ $# -gt 1 ]; then
     echo
     echo "Example: deploy.sh lakefs"
     echo
+    exit 1
 fi
 
 # Create the project if it doesn't already exist
@@ -56,3 +58,4 @@ oc apply -f ./manifests/lakefs-repos-job.yaml
 sleep 30
 echo
 echo "Done!"
+exit 0
