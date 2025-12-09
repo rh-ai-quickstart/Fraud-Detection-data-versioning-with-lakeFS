@@ -12,7 +12,7 @@ usage_and_exit () {
     exit 1
 }
 
-# Validate a project name is included
+# Validate a project name, and only that, is included
 if [ $# -lt 1 ]; then
     usage_and_exit "Must include project to deploy to"
 elif [ $# -gt 1 ]; then
