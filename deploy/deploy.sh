@@ -20,7 +20,7 @@ elif [ $# -gt 1 ]; then
 fi
 
 # Create the project if it doesn't already exist
-oc get project $1
+oc get project $1 > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "$1 project already exists. Switching to it."
     oc project lakefs
