@@ -4,16 +4,33 @@ In order to set up the environment, there are currently four steps, assuming the
 
 # Pre-requisites
 1. OpenShift cluster is deployed
-2. The `lakefs` project is created (it can be created with `oc new-project lakefs`)
-3. User has `admin` permissions in the `lakefs`namespace
+2. User has `admin` permissions in the `lakefs`namespace
 
 # Deployment Process
 The process is very simple. Just follow the steps below. The details of what the script does are explained below.
 
-1. Clone the repo
+1. Clone this repo
+```
+$ git clone https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git
+```
+
 2. cd to `deploy` directory
-3. Make sure you have the cluster API URL and your authentication token handy, as the script will prompt for them
-4. Make sure `deploy.sh` is executable and run it
+```
+$ cd Fraud-Detection-data-versioning-with-lakeFS/deploy
+```
+
+3. Make sure you have the cluster API URL and your authentication token handy, as the script will prompt for them. You can get this in the OpenShift web console, by clicking on the `?` in the upper-right of the screen. Then click on `Command Line Tools`, then `Copy login command`, then on the `Display Token` link. After entering your login credentials again, copy the values of the `token` and `server` parameters for use later.
+
+4. Create the `lakefs` project. The script requires this project name. If the project is already create, just make sure you have admin permissios in the project, then skip this step.
+```
+$ oc new-project lakefs
+```
+
+5. Make sure `deploy.sh` is executable and run it
+```
+$ chmod + deploy.sh
+$ ./deploy.sh
+```
 
 # Cleanup
 The `lakefs` project can be deleted, which will delete all of the resources in it, including deployments, secrets, pods, configmaps, etc.
