@@ -140,13 +140,9 @@ oc delete project lakefs
 
 ## References 
 
-<!-- 
-
-*Section optional.* Remember to remove if do not use.
-
-Include links to supporting information, documentation, or learning materials.
-
---> 
+* lakeFS documentation [v1.73](https://docs.lakefs.io/v1.73/)
+* OpenShift AI documentatin [c2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
+* OpenShift AI Fraud Detection [example](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/openshift_ai_tutorial_-_fraud_detection_example)
 
 ## Technical details
 
@@ -162,16 +158,7 @@ Welcome to add sections as needed. Keep additions as structured and consistent a
 
 ## Tags
 
-<!-- CONTRIBUTOR TODO: add metadata and tags for publication
-
-TAG requirements: 
-	* Title: max char: 64, describes quickstart (match H1 heading) 
-	* Description: max char: 160, match SHORT DESCRIPTION above
-	* Industry: target industry, ie. Healthcare OR Financial Services
-	* Product: list primary product, ie. OpenShift AI OR OpenShift OR RHEL 
-	* Use case: use case descriptor, ie. security, automation, 
-	* Contributor org: defaults to Red Hat unless partner or community
-	
-Additional MIST tags, populated by web team.
-
--->
+* Product: OpenShift AI
+* Partner: lakeFS
+* Partner product: lakeFS
+* Business challenge: Fraud detection
