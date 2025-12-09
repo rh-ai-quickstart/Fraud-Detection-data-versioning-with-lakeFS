@@ -113,7 +113,10 @@ $ oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:64
 
 4. Make sure `deploy.sh` is executable and run it, passing it the name of the project in which to install. It can be an existing or new project. In this example, it will deploy to the `lakefs` project.
 ```
+# Make script executable
 $ chmod + deploy.sh
+
+# Run script passing it the project in which to install
 $ ./deploy.sh lakefs
 ```
 
