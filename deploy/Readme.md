@@ -47,7 +47,7 @@ oc delete project lakefs
 ```
 $ oc apply -f minio-for-lakefs.yaml
 ```
-5. Create the lakeFS config file in a configmap using the `lakefs-config-job.yaml` file. This manifest file, when applied to the cluster, will create the config map used to store the *lakeFS* configuration, which is used when it is brought up. This configuration will include the login credentials to the lakeFS console, accessible from its route, and the configuration and credentials lakeFS will use to access the backend MinIO object storage.
+5. Create the lakeFS config file in a configmap using the `lakefs-config-job.yaml` file. This manifest file, when applied to the cluster, will create the config map used to store the *lakeFS* configuration, which is used when it is brought up. This configuration will include the login credentials to the lakeFS console, accessible from its route, and the configuration and credentials lakeFS will use to access the backend MinIO object storage. This will also create the required storage buckets in MinIO.
 ```
 $ oc apply -f lakefs-config-job.yaml
 ```
@@ -55,7 +55,7 @@ $ oc apply -f lakefs-config-job.yaml
 ```
 $ helm install my-lakefs ./helm/lakefs
 ```
-7. Create the reposotories in lakeFS, which will create the storage buckets in MinIO, using the `lakefs-repos-job.yaml` file.
+7. Create the reposotories in lakeFS, which will associate to the storage buckets in MinIO, using the `lakefs-repos-job.yaml` file.
 ```
 $ oc apply -f lakefs-repos-job.yaml
 ```
