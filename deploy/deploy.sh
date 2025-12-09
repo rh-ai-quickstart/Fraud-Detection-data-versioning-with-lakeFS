@@ -16,13 +16,13 @@ echo
 
 # Deploy minio
 echo "Deploying MinIO and creating storage buckets"
-oc apply -f ./minio-for-lakefs.yaml
+oc apply -f ./manifests/minio-for-lakefs.yaml
 sleep 30
 echo
 
 # Create lakeFS config and storage in a config map
 echo "Creating configmap with lakeFS configuration"
-oc apply -f ./lakefs-config-job.yaml
+oc apply -f ./manifests/lakefs-config-job.yaml
 sleep 10
 echo
 
@@ -34,7 +34,7 @@ echo
 
 # Create repos in lakeFS, thereby creating storage buckets in Minio
 echo "Creating data repos in lakeFS"
-oc apply -f ./lakefs-repos-job.yaml
+oc apply -f ./manifests/lakefs-repos-job.yaml
 sleep 30
 echo
 echo "Done!"
