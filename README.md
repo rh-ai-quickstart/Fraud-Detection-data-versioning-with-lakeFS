@@ -141,7 +141,7 @@ oc delete project lakefs
 ## References 
 
 * lakeFS documentation [v1.73](https://docs.lakefs.io/v1.73/)
-* OpenShift AI documentatin [c2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
+* OpenShift AI documentatin [v2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
 * OpenShift AI Fraud Detection [example](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/openshift_ai_tutorial_-_fraud_detection_example)
 
 ## Technical details
