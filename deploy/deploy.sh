@@ -1,39 +1,40 @@
 #1/bin/bash
 
-# Get cluster access URL and login credential
-# read -p "Enter the URL for the cluster API (ie. https://api.my-cluster.my-org.com:6443): " api
-# read -s -p "Enter your access token from the OpenShift cluster: " token
 
-# Log in to the cluster
-# echo "Logging in to the cluster"
-# oc login --token=${token} --server=${api}
-# echo
-
-# Change to the lakefs project. It must be created prior to running this script
-echo "Setting project to lakefs"
-oc project lakefs
-echo
+# Create the project if it doesn't already exist
+oc get project $1
+if [ $? -eq 0 ]; then
+    echo "$1 project already exists. Switching to it."
+    oc project lakefs
+else
+    echo " Creating new project $1 and switching to it."
+    oc new-project $1
+fi
 
 # Deploy minio
 echo "Deploying MinIO and creating storage buckets"
+echo
 oc apply -f ./manifests/minio-for-lakefs.yaml
 sleep 30
 echo
 
 # Create lakeFS config and storage in a config map
 echo "Creating configmap with lakeFS configuration"
+echo
 oc apply -f ./manifests/lakefs-config-job.yaml
 sleep 10
 echo
 
 # Deploy lakeFS
 echo "Deploying lakeFS with configuration in configmap"
+echo
 helm install my-lakefs ./helm/lakefs
 sleep 30
 echo
 
-# Create repos in lakeFS, thereby creating storage buckets in Minio
+# Create repos in lakeFS
 echo "Creating data repos in lakeFS"
+echo
 oc apply -f ./manifests/lakefs-repos-job.yaml
 sleep 30
 echo
