@@ -73,19 +73,17 @@ The user performing this quickstart should have the ability to create a project 
 
 ## Deploy
 
-The following steps assume the following pre-requisite products and components are deployed and functional, in the following order:
+The process is very simple. Just follow the steps below.
+
+### Pre-requisites
+
+The steps assume the following pre-requisite products and components are deployed and functional with required permissions on the cluster:
 
 1. Red Hat OpenShift Container Platform
 2. Red Hat OpenShift Service Mesh
 3. Red Hat OpenShift Serverless
 4. Red Hat OpenShift AI
-
-The process is very simple. Just follow the steps below.
-
-### Pre-requisites
-1. OpenShift cluster is deployed and healthy
-2. User has `admin` permissions in the cluster
-3. Make sure you have the cluster API URL and your authentication token handy. You can get this in the OpenShift web console, by clicking on the `?` in the upper-right of the screen. Then click on `Command Line Tools`, then `Copy login command`, then on the `Display Token` link. After entering your login credentials again, copy the line beginneing with `oc login` for use later.
+5. User has `admin` permissions in the cluster
 
 ### Deployment Steps
 
