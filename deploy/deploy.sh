@@ -1,13 +1,13 @@
 #1/bin/bash
 
 # Get cluster access URL and login credential
-read -p "Enter the URL for the cluster API (ie. https://api.my-cluster.my-org.com:6443): " api
-read -s -p "Enter your access token from the OpenShift cluster: " token
+# read -p "Enter the URL for the cluster API (ie. https://api.my-cluster.my-org.com:6443): " api
+# read -s -p "Enter your access token from the OpenShift cluster: " token
 
 # Log in to the cluster
-echo "Logging in to the cluster"
-oc login --token=${token} --server=${api}
-echo
+# echo "Logging in to the cluster"
+# oc login --token=${token} --server=${api}
+# echo
 
 # Change to the lakefs project. It must be created prior to running this script
 echo "Setting project to lakefs"
@@ -15,7 +15,7 @@ oc project lakefs
 echo
 
 # Deploy minio
-echo "Deploying MinIO"
+echo "Deploying MinIO and creating storage buckets"
 oc apply -f ./minio-for-lakefs.yaml
 sleep 30
 echo
