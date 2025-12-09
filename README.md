@@ -4,11 +4,21 @@ Fraud detection is a critical part of any business. Discover how data management
 
 ## Table of contents
 
-<!-- Table of contents is optional, but recommended. 
-
-REMEMBER: to remove this section if you don't use a TOC.
-
--->
+- [Detailed description](#detailed-description)
+  - [See it in action](#see-it-in-action)
+  - [Architecture diagrams](#architecture-diagrams)
+- [Requirements](#requirements)
+  - [Minimum hardware requirements](#minimum-hardware-requirements)
+  - [Minimum software requirements](#minimum-software-requirements)
+  - [Required user permissions](#required-user-permissions)
+- [Deploy](#deploy)
+  - [Pre-requisites](#pre-requisites)
+  - [Deployment steps](#deployment-steps)
+  - [Access lakeFS UI](#access-lakefs-ui)
+  - [Delete](#delete)
+- [References](#references)
+- [Technical details](#technical-details)
+- [Tags](#tags)
 
 ## Detailed description
 
