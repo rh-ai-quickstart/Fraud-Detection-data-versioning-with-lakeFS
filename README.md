@@ -111,15 +111,10 @@ $ cd Fraud-Detection-data-versioning-with-lakeFS/deploy
 $ oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
 ```
 
-4. Create the `lakefs` project. The script requires this project name. If the project already exists, just make sure you have `admin` permissions in the project, then skip this step.
-```
-$ oc new-project lakefs
-```
-
-5. Make sure `deploy.sh` is executable and run it
+4. Make sure `deploy.sh` is executable and run it, passing it the name of the project in which to install. It can be an existing or new project. In this example, it will deploy to the `lakefs` project.
 ```
 $ chmod + deploy.sh
-$ ./deploy.sh
+$ ./deploy.sh lakefs
 ```
 
 ### Access lakeFS UI
@@ -133,7 +128,7 @@ Use the route to access the lakeFS browser-base UI.
 
 ### Delete
 
-The `lakefs` project can be deleted, which will delete all of the resources in it, including deployments, secrets, pods, configmaps, etc.
+The project the apps were installed in can be deleted, which will delete all of the resources in it, including deployments, secrets, pods, configmaps, etc.
 ```
 oc delete project lakefs
 ```
