@@ -66,7 +66,7 @@ echo
 # Deploy lakeFS
 echo "Deploying lakeFS with configuration in configmap"
 echo
-helm install my-lakefs ./helm/lakefs
+helm install my-lakefs ./lakefs/helm
 if [ $? -ne 0 ]; then
     error_and_exit $project "Error: Failed to install my-lakefs helm chart"
 fi
