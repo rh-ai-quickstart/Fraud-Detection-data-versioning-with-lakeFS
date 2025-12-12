@@ -1,0 +1,39 @@
+# OpenShift-specific values for fraud-detection chart
+# This file overrides values.yaml for OpenShift deployments
+
+# Global settings
+global:
+  openshift: true
+
+# OpenShift-specific features
+openshift:
+  enabled: true
+  routes:
+    enabled: true
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+# MinIO configuration (subchart) - OpenShift overrides
+minio:
+  enabled: true
+  
+  openshift:
+    enabled: true
+    routes:
+      enabled: true
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+
+# LakeFS configuration - no additional OpenShift-specific overrides needed
+lakefs:
+  # Routes are controlled by the global openshift.routes.enabled setting
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+

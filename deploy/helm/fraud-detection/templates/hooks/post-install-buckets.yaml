@@ -1,0 +1,89 @@
+{{- if and .Values.minio.enabled .Values.minio.buckets.create }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-minio-create-buckets
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "3"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: minio
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Values.minio.serviceAccount.name | default "default" }}
+      initContainers:
+        - name: wait-for-minio
+          image: curlimages/curl:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |-
+              echo "Waiting for MinIO to be ready..."
+              until curl -sf http://{{ include "minio.fullname" . }}:{{ .Values.minio.service.apiPort }}/minio/health/live; do
+                echo -n "."
+                sleep 5
+              done
+              echo "MinIO is ready!"
+              sleep 10
+      containers:
+        - name: create-buckets
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |-
+              echo "Installing boto3..."
+              pip install --user --no-cache-dir -q boto3
+              
+              echo "Creating buckets..."
+              python3 << 'EOF'
+              import boto3, os, sys
+
+              try:
+                s3 = boto3.client("s3",
+                                  endpoint_url="http://{{ include "minio.fullname" . }}:{{ .Values.minio.service.apiPort }}",
+                                  aws_access_key_id=os.getenv("MINIO_USER"),
+                                  aws_secret_access_key=os.getenv("MINIO_PASSWORD"))
+                
+                existing_buckets = [bu["Name"] for bu in s3.list_buckets()["Buckets"]]
+                {{- range .Values.minio.buckets.names }}
+                bucket = '{{ . }}'
+                if bucket not in existing_buckets:
+                  print(f'Creating bucket: {bucket}')
+                  s3.create_bucket(Bucket=bucket)
+                  print(f'✓ Bucket {bucket} created')
+                else:
+                  print(f'✓ Bucket {bucket} already exists')
+                {{- end }}
+                print("All buckets ready!")
+              except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+              EOF
+          env:
+            - name: HOME
+              value: /tmp
+            - name: MINIO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: user
+            - name: MINIO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: password
+{{- end }}
+
