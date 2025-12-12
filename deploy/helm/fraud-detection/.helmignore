@@ -16,8 +16,16 @@
 *.tmp
 *.orig
 *~
+*.backup
+*.backup/
 # Various IDEs
 .project
 .idea/
 *.tmproj
 .vscode/
+# Documentation that shouldn't be in the package
+README.md
+MIGRATION_GUIDE.md
+TROUBLESHOOTING.md
+*.md
+

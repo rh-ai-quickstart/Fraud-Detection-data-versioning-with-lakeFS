@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lakefs.fullname" . }}
+  labels:
+    {{- include "lakefs.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.lakefs.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "lakefs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/lakefs/configmap.yaml") . | sha256sum }}
+        {{- if .Values.lakefs.podAnnotations }}
+        sidecar.istio.io/inject: "false"
+        {{- end }}
+      labels:
+        {{- include "lakefs.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "lakefs.fullname" . }}
+      {{- if .Values.minio.enabled }}
+      initContainers:
+        - name: wait-for-minio
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for MinIO to be ready..."
+              until curl -sf http://{{ include "minio.fullname" . }}:9000/minio/health/live; do
+                echo -n "."
+                sleep 5
+              done
+              echo "MinIO is ready!"
+      {{- end }}
+      containers:
+        - name: lakefs
+          image: "{{ .Values.lakefs.image.repository }}:{{ .Values.lakefs.image.tag }}"
+          imagePullPolicy: {{ .Values.lakefs.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - run
+            - --config
+            - /etc/lakefs/config.yaml
+          ports:
+            - name: http
+              containerPort: {{ .Values.lakefs.service.port | default 8000 }}
+              protocol: TCP
+          env:
+            {{- if .Values.minio.enabled }}
+            - name: LAKEFS_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: user
+            - name: LAKEFS_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: password
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/lakefs
+            - name: data
+              mountPath: /lakefs
+          {{- if .Values.lakefs.resources }}
+          resources:
+            {{- toYaml .Values.lakefs.resources | nindent 12 }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "lakefs.fullname" . }}
+        - name: data
+          emptyDir: {}
+
