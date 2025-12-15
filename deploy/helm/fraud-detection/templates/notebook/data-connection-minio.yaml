@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "fraud-detection.fullname" . }}-minio-connection
+  name: pipeline-artifacts
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "fraud-detection.labels" . | nindent 4 }}
@@ -11,13 +11,13 @@ metadata:
     opendatahub.io/managed: "true"
   annotations:
     opendatahub.io/connection-type: "s3"
-    openshift.io/display-name: "MinIO Object Storage (Fraud Detection)"
+    openshift.io/display-name: "pipeline-artifacts"
 type: Opaque
 stringData:
   AWS_ACCESS_KEY_ID: {{ .Values.minio.secret.user | quote }}
   AWS_SECRET_ACCESS_KEY: {{ .Values.minio.secret.password | quote }}
-  AWS_S3_ENDPOINT: {{ .Values.notebook.minio.endpoint | quote }}
+  AWS_S3_ENDPOINT: {{ .Values.minio.endpoint | quote }}
   AWS_DEFAULT_REGION: "us-east-1"
-  AWS_S3_BUCKET: {{ .Values.notebook.minio.defaultBucket | default "my-storage" | quote }}
+  AWS_S3_BUCKET: {{ .Values.minio.defaultBucket | default "pipeline-artifacts" | quote }}
 {{- end }}
 

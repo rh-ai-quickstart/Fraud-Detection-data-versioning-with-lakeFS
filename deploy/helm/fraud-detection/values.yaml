@@ -64,11 +64,11 @@ minio:
       memory: 1Gi
   
   secret:
-    name: ""  # Defaults to minio fullname
-    user: minio_fraud_user
-    password: minio_fraud_password
-    host: minio
-    port: "9000"
+    name: pipeline-artifacts
+    secret_key: something
+    secret_access_key: simple
+    endpoint: https://minio-api-fraud-detection.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+    defaultBucket: pipeline-artifacts
   
   openshift:
     enabled: false
@@ -97,6 +97,17 @@ minio:
 # LakeFS configuration
 lakefs:
   replicaCount: 1
+
+  secret:
+    name: ""  # Defaults to minio fullname
+    secret_key: minio_fraud_user
+    secret_access_key: minio_fraud_password
+    endpoint: http://my-lakefs
+
+    repo_name: my-storage
+    default_region: us-east-1
+    notebook_access_key_id: something
+    notebook_secret_access_key: simple
   
   image:
     repository: treeverse/lakefs
@@ -170,11 +181,12 @@ notebook:
   username: "admin"
   
   # Notebook image configuration (Red Hat UBI Python - always available)
+  # image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/tensorflow:2025.2
   image:
-    repository: registry.access.redhat.com/ubi9/python-311
-    tag: "1-77"
+    repository: registry.access.redhat.com/redhat-ods-applications/tensorflow
+    tag: "2025.2"
     pullPolicy: IfNotPresent
-    name: "Python 3.11"  # Display name for the image
+    name: "Python 3.12"  # Display name for the image
   
   # Resource configuration
   resources:

@@ -51,35 +51,16 @@ spec:
         - name: CONDARC
           value: /opt/app-root/src/.condarc
         # LakeFS connection information
-        - name: LAKEFS_ENDPOINT
-          value: {{ .Values.notebook.lakefs.url }}
-        - name: LAKEFS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "fraud-detection.fullname" . }}-lakefs-secret
-              key: accessKeyId
-              optional: true
-        - name: LAKEFS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "fraud-detection.fullname" . }}-lakefs-secret
-              key: secretAccessKey
-              optional: true
-        # MinIO connection information
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.minio.secret.name | default "minio" }}
-              key: user
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.minio.secret.name | default "minio" }}
-              key: password
-        - name: AWS_S3_ENDPOINT
-          value: {{ .Values.notebook.minio.endpoint }}
-        - name: AWS_DEFAULT_REGION
-          value: us-east-1
+        - name: LAKECTL_SERVER_ENDPOINT_URL
+          value: {{ .Values.lakefs.secret.endpoint }}
+        - name: LAKEFS_REPO_NAME
+          value: {{ .Values.lakefs.secret.repo_name }}
+        - name: LAKEFS_DEFAULT_REGION
+          value: {{ .Values.lakefs.secret.default_region }}
+        - name: LAKECTL_CREDENTIALS_ACCESS_KEY_ID
+          value: {{ .Values.lakefs.secret.notebook_access_key_id }}
+        - name: LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY
+          value: {{ .Values.lakefs.secret.notebook_secret_access_key }}
         ports:
         - containerPort: 8888
           name: notebook-port
