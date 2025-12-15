@@ -1,4 +1,22 @@
-# Detailed steps of deploy.sh
+# Deployment Guide
+
+> **⚠️ NOTICE: New Helm-Based Deployment Available**
+>
+> A new, improved all-Helm deployment method is now available that offers:
+> - Single command deployment
+> - Automatic dependency management
+> - Better portability (works on any Kubernetes cluster)
+> - Easier upgrades and rollbacks
+>
+> **We recommend using the new Helm chart**: [helm/fraud-detection/README.md](helm/fraud-detection/README.md)
+>
+> The legacy `deploy.sh` script documented below is still supported but deprecated.
+
+---
+
+## Legacy Deployment Method (deploy.sh)
+
+### Detailed steps of deploy.sh
 
 ARG 1: project to install to
 

@@ -1,0 +1,48 @@
+{{- if .Values.repositories.create }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "lakefs.fullname" . }}-create-repos
+  labels:
+    {{- include "lakefs.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "lakefs.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      containers:
+        - name: create-repos
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for lakeFS to be ready
+              echo "Waiting for lakeFS service to be ready..."
+              while ! curl -s http://{{ include "lakefs.fullname" . }}:80/_health; do
+                echo -n "."
+                sleep 5
+              done
+              echo "lakeFS is ready!"
+              echo
+              
+              {{- range .Values.repositories.repos }}
+              # Create {{ .name }} repository
+              echo "Creating {{ .name }} repository..."
+              curl -u "{{ $.Values.lakefs.adminCredentials.accessKeyId }}:{{ $.Values.lakefs.adminCredentials.secretAccessKey }}" \
+                   -X POST \
+                   -H "Content-Type: application/json" \
+                   -d '{"name": "{{ .name }}", "storage_namespace": "{{ .storageNamespace }}", "default_branch": "{{ .defaultBranch }}"{{ if .sampleData }}, "sample_data": true{{ end }}}' \
+                   http://{{ include "lakefs.fullname" $ }}:80/api/v1/repositories || true
+              echo "{{ .name }} repository created!"
+              echo
+              {{- end }}
+{{- end }}
+

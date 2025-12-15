@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lakefs.fullname" . }}
+  labels:
+    {{- include "lakefs.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    logging:
+      format: {{ .Values.lakefs.config.logging.format | default "json" }}
+      level: {{ .Values.lakefs.config.logging.level | default "WARN" }}
+      output: {{ .Values.lakefs.config.logging.output | default "-" | quote }}
+    database:
+      type: {{ .Values.lakefs.config.database.type | default "local" }}
+      {{- if eq .Values.lakefs.config.database.type "postgres" }}
+      postgres:
+        connection_string: {{ .Values.lakefs.config.database.postgres.connectionString | quote }}
+      {{- end }}
+    auth:
+      encrypt:
+        secret_key: {{ .Values.lakefs.config.auth.encrypt.secretKey | default "10a718b3f285d89c36e9864494cdd1507f3bc85b342df24736ea81f9a1134bcc" | quote }}
+    blockstore:
+      type: {{ .Values.lakefs.config.blockstore.type }}
+      {{- if eq .Values.lakefs.config.blockstore.type "s3" }}
+      s3:
+        force_path_style: {{ .Values.lakefs.config.blockstore.s3.forcePathStyle | default true }}
+        endpoint: {{ .Values.lakefs.config.blockstore.s3.endpoint }}
+        {{- if .Values.lakefs.config.blockstore.s3.region }}
+        region: {{ .Values.lakefs.config.blockstore.s3.region }}
+        {{- end }}
+        discover_bucket_region: {{ .Values.lakefs.config.blockstore.s3.discoverBucketRegion | default false }}
+      {{- end }}
+    installation:
+      user_name: {{ .Values.lakefs.adminCredentials.username | default "admin" }}
+      access_key_id: {{ .Values.lakefs.adminCredentials.accessKeyId }}
+      secret_access_key: {{ .Values.lakefs.adminCredentials.secretAccessKey }}
+

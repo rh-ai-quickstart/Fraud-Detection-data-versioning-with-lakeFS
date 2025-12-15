@@ -1,0 +1,164 @@
+# Default values for fraud-detection chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Global settings
+global:
+  # OpenShift-specific settings
+  openshift: false
+
+# OpenShift-specific features
+openshift:
+  enabled: false
+  routes:
+    enabled: false
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+
+# RBAC configuration
+rbac:
+  create: true
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  name: "demo-setup"
+
+# MinIO configuration (subchart)
+minio:
+  enabled: true
+  
+  image:
+    repository: quay.io/minio/minio
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 9090
+    apiPort: 9000
+  
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+  
+  volumeMounts:
+    - mountPath: /data
+      name: minio-data
+  
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 1Gi
+  
+  secret:
+    name: ""  # Defaults to minio fullname
+    user: minio_fraud_user
+    password: minio_fraud_password
+    host: minio
+    port: "9000"
+  
+  openshift:
+    enabled: false
+    routes:
+      enabled: false
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+  
+  # Bucket creation configuration
+  buckets:
+    create: true
+    names:
+      - pipeline-artifacts
+      - my-storage
+      - quickstart
+  
+  # ServiceAccount for jobs (needed for bucket creation)
+  serviceAccount:
+    create: false  # We'll use the main chart's ServiceAccount
+    name: demo-setup
+  
+  rbac:
+    create: true
+
+# LakeFS configuration
+lakefs:
+  replicaCount: 1
+  
+  image:
+    repository: treeverse/lakefs
+    tag: "1.73.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 8000
+  
+  resources: {}
+    # limits:
+    #   cpu: "2"
+    #   memory: 2Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 1Gi
+  
+  podAnnotations: {}
+  
+  config:
+    logging:
+      format: json
+      level: WARN
+      output: "-"
+    
+    database:
+      type: local
+      # For external PostgreSQL:
+      # type: postgres
+      # postgres:
+      #   connectionString: "postgres://user:pass@host:5432/lakefs"
+    
+    auth:
+      encrypt:
+        # Generate a random secret_key with: openssl rand -hex 32
+        secretKey: "10a718b3f285d89c36e9864494cdd1507f3bc85b342df24736ea81f9a1134bcc"
+    
+    blockstore:
+      type: s3
+      s3:
+        endpoint: http://fraud-detection-minio:9000
+        forcePathStyle: true
+        discoverBucketRegion: false
+        region: ""
+  
+  # LakeFS admin credentials for initial setup and API access
+  adminCredentials:
+    username: admin
+    accessKeyId: something
+    secretAccessKey: simple
+
+# Repository creation configuration
+repositories:
+  create: true
+  repos:
+    - name: quickstart
+      storageNamespace: s3://quickstart/
+      defaultBranch: main
+      sampleData: true
+    - name: my-storage
+      storageNamespace: s3://my-storage/
+      defaultBranch: main
+      sampleData: false
+
