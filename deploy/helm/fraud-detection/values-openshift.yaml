@@ -37,3 +37,17 @@ lakefs:
       cpu: 500m
       memory: 1Gi
 
+# Notebook configuration - OpenShift overrides
+notebook:
+  enabled: true  # Enable notebook for OpenShift AI
+  
+  # OpenShift AI specific settings
+  openshiftAI:
+    host: "rhods-dashboard-redhat-ods-applications.apps.your-cluster.example.com"  # Update with your cluster's route
+  
+  # Git sync to automatically clone notebooks
+  gitSync:
+    enabled: true  # Automatically clone notebooks from repository
+    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    branch: "main"
+

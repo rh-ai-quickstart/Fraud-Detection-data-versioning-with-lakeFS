@@ -1,0 +1,90 @@
+{{- if and .Values.notebook.enabled .Values.notebook.gitSync.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-clone-notebooks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: notebook-setup
+    spec:
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-pvc
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for PVC to be bound..."
+          until [ -d /workspace ]; do
+            echo "PVC not yet available, waiting..."
+            sleep 2
+          done
+          echo "PVC is ready"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      containers:
+      - name: git-clone
+        image: {{ .Values.notebook.gitSync.image }}
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          cd /workspace
+          
+          # Check if notebooks already exist
+          if [ -d "demo/notebooks" ] && [ "$(ls -A demo/notebooks 2>/dev/null)" ]; then
+            echo "Notebooks already exist in workspace, skipping clone"
+            exit 0
+          fi
+          
+          # Clone the repository
+          echo "Cloning repository: {{ .Values.notebook.gitSync.repo }}"
+          git clone --depth 1 {{ if .Values.notebook.gitSync.branch }}--branch {{ .Values.notebook.gitSync.branch }}{{ end }} {{ .Values.notebook.gitSync.repo }} /tmp/repo
+          
+          # Copy notebooks to workspace
+          echo "Copying notebooks to workspace..."
+          mkdir -p demo/notebooks
+          cp -r /tmp/repo/demo/notebooks/* demo/notebooks/ || echo "No notebooks found in demo/notebooks"
+          
+          # Copy scripts if they exist
+          if [ -d "/tmp/repo/demo/scripts" ]; then
+            mkdir -p demo/scripts
+            cp -r /tmp/repo/demo/scripts/* demo/scripts/
+          fi
+          
+          # Copy pipelines if they exist
+          if [ -d "/tmp/repo/demo/pipelines" ]; then
+            mkdir -p demo/pipelines
+            cp -r /tmp/repo/demo/pipelines/* demo/pipelines/
+          fi
+          
+          # Clean up
+          rm -rf /tmp/repo
+          
+          echo "Notebooks successfully copied to workspace"
+          ls -la demo/notebooks/
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: {{ include "fraud-detection.fullname" . }}-notebook-pvc
+{{- end }}
+

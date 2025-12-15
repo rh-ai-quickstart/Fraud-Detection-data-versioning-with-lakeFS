@@ -8,6 +8,7 @@ This chart includes:
 - **MinIO** - S3-compatible object storage (v0.5.2 from ai-architecture-charts)
 - **LakeFS** - Git-like data versioning system
 - **Automated Setup** - Buckets and repositories created automatically via Helm hooks
+- **Jupyter Notebooks** - Optional OpenShift AI integration with pre-configured notebooks (see [NOTEBOOKS.md](NOTEBOOKS.md))
 
 ### Chart Dependencies
 
@@ -27,6 +28,15 @@ dependencies:
 - Helm 3.x
 - kubectl or oc CLI configured
 - PersistentVolume provisioner support (for MinIO storage)
+- **For Jupyter Notebooks**: OpenShift AI or Open Data Hub installed (OpenShift only)
+
+## Documentation
+
+- **[NOTEBOOKS.md](NOTEBOOKS.md)** - Complete guide for using Jupyter notebooks with OpenShift AI
+- **[OPENSHIFT_AI_INTEGRATION.md](OPENSHIFT_AI_INTEGRATION.md)** - Technical details of OpenShift AI integration
+- **[values.yaml](values.yaml)** - Default configuration values
+- **[values-openshift.yaml](values-openshift.yaml)** - OpenShift-specific overrides
+- **[values-openshift-with-notebooks.yaml](values-openshift-with-notebooks.yaml)** - Extended notebook configuration
 
 ## Quick Start
 
@@ -39,13 +49,26 @@ oc create namespace fraud-detection
 # Update dependencies (downloads MinIO chart)
 helm dependency update
 
-# Deploy with OpenShift-specific settings
+# Deploy with OpenShift-specific settings (includes Jupyter notebook)
 helm install fraud-detection . \
   --namespace fraud-detection \
   --values values-openshift.yaml \
   --wait \
   --timeout 10m
+
+# Optional: Update OpenShift AI dashboard host if needed
+# (Replace with your cluster's actual route)
+helm upgrade fraud-detection . \
+  --namespace fraud-detection \
+  --values values-openshift.yaml \
+  --set notebook.openshiftAI.host="rhods-dashboard-redhat-ods-applications.apps.your-cluster.example.com" \
+  --reuse-values
 ```
+
+**Note**: The OpenShift deployment automatically enables:
+- Jupyter notebook server with OpenShift AI integration
+- Auto-cloning of demo notebooks from the repository
+- Pre-configured LakeFS and MinIO connection details
 
 ### Deploy on Kubernetes
 
@@ -101,6 +124,21 @@ Total deployment time: 5-10 minutes
   - `quickstart` (with sample data)
   - `my-storage` (empty)
 
+### Jupyter Notebook (OpenShift AI Integration)
+- **Enabled**: Only on OpenShift with `values-openshift.yaml` (disabled by default)
+- **Custom Resource**: Kubeflow Notebook CR for OpenShift AI/Open Data Hub
+- **Image**: ODH Minimal Notebook (Python 3.9+)
+- **Storage**: 20Gi PVC for notebook workspace
+- **Pre-configured**: LakeFS and MinIO connection details via environment variables
+- **Git Sync**: Automatically clones demo notebooks from repository
+- **Notebooks Included**: 6 fraud detection notebooks with LakeFS integration
+  - `1_experiment_train_lakefs.ipynb`
+  - `2_save_model_lakefs.ipynb`
+  - `3_rest_requests_multi_model_lakefs.ipynb`
+  - `4_grpc_requests_multi_model_lakefs.ipynb`
+  - `5_rest_requests_single_model_lakefs.ipynb`
+  - `8_distributed_training_lakefs.ipynb`
+
 ## Accessing Services
 
 ### Get Service URLs (OpenShift)
@@ -112,6 +150,32 @@ oc get route fraud-detection-lakefs -n fraud-detection -o jsonpath='{.spec.host}
 # MinIO Console
 oc get route fraud-detection-minio-console -n fraud-detection -o jsonpath='{.spec.host}'
 ```
+
+### Accessing Notebooks (OpenShift AI)
+
+When deployed on OpenShift with `values-openshift.yaml`, notebooks are automatically available in the OpenShift AI dashboard:
+
+1. Navigate to the OpenShift AI dashboard
+2. Go to the **Data Science Projects** section
+3. Select the `fraud-detection` project
+4. Click on the notebook server to access JupyterLab
+5. The demo notebooks will be automatically cloned into the `demo/notebooks/` directory
+
+Alternatively, get the notebook URL directly:
+
+```bash
+# Get the notebook route
+oc get notebook fraud-detection-notebook -n fraud-detection \
+  -o jsonpath='{.metadata.annotations.notebooks\.opendatahub\.io/last-activity}'
+```
+
+**Pre-configured Environment Variables:**
+- `LAKEFS_ENDPOINT`: LakeFS API endpoint
+- `LAKEFS_ACCESS_KEY_ID`: LakeFS access key
+- `LAKEFS_SECRET_ACCESS_KEY`: LakeFS secret key
+- `AWS_S3_ENDPOINT`: MinIO S3 endpoint
+- `AWS_ACCESS_KEY_ID`: MinIO access key
+- `AWS_SECRET_ACCESS_KEY`: MinIO secret key
 
 ### Port Forwarding (Kubernetes)
 
@@ -179,6 +243,42 @@ minio:
 | `repositories.create` | Auto-create repositories | `true` |
 | `openshift.enabled` | Enable OpenShift features | `false` |
 | `openshift.routes.enabled` | Create OpenShift routes | `false` |
+| `notebook.enabled` | Enable Jupyter notebook | `false` |
+| `notebook.storage.size` | Notebook storage size | `20Gi` |
+| `notebook.resources.limits.memory` | Notebook memory limit | `8Gi` |
+| `notebook.gitSync.enabled` | Auto-clone notebooks from git | `false` |
+
+### Customizing Notebook Configuration
+
+The notebook feature is designed for OpenShift AI integration. To customize:
+
+```yaml
+notebook:
+  enabled: true
+  username: "your-username"
+  
+  # Notebook image (ODH/RHODS compatible)
+  image:
+    repository: quay.io/modh/odh-minimal-notebook-image-n
+    tag: "2024.2"
+  
+  # Resource limits
+  resources:
+    limits:
+      cpu: "4"
+      memory: "16Gi"
+  
+  # Storage for notebooks and data
+  storage:
+    size: 50Gi
+    storageClassName: "gp3"
+  
+  # Automatically clone demo notebooks
+  gitSync:
+    enabled: true
+    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    branch: "main"
+```
 
 ### Customizing Repositories
 

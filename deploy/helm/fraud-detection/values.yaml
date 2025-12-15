@@ -162,3 +162,56 @@ repositories:
       defaultBranch: main
       sampleData: false
 
+# Notebook configuration for OpenShift AI / Open Data Hub
+notebook:
+  enabled: false  # Set to true to enable notebook deployment
+  
+  # Username for the notebook
+  username: "admin"
+  
+  # Notebook image configuration
+  image:
+    repository: quay.io/modh/odh-minimal-notebook-image-n
+    tag: "2024.2"
+    pullPolicy: IfNotPresent
+    name: "Minimal Python"  # Display name for the image
+  
+  # Resource configuration
+  resources:
+    size: "Small"  # Display name for size selection
+    limits:
+      cpu: "2"
+      memory: "8Gi"
+    requests:
+      cpu: "1"
+      memory: "4Gi"
+  
+  # Storage configuration
+  storage:
+    size: 20Gi
+    storageClassName: ""  # Use default storage class if not specified
+  
+  # Shared memory for large model training
+  shm:
+    enabled: true
+    size: 2Gi
+  
+  # LakeFS connection information
+  lakefs:
+    url: "http://fraud-detection-lakefs:8000"
+  
+  # MinIO connection information  
+  minio:
+    endpoint: "http://fraud-detection-minio:9000"
+  
+  # OpenShift AI specific configuration
+  openshiftAI:
+    host: ""  # Will be set in OpenShift-specific values
+  
+  # Git sync configuration to clone notebooks
+  gitSync:
+    enabled: false  # Set to true to automatically clone notebooks from git
+    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    branch: "main"
+    image: "alpine/git:latest"
+

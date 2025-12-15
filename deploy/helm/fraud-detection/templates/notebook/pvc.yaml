@@ -1,0 +1,20 @@
+{{- if .Values.notebook.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-notebook-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.notebook.storage.size }}
+  {{- if .Values.notebook.storage.storageClassName }}
+  storageClassName: {{ .Values.notebook.storage.storageClassName }}
+  {{- end }}
+{{- end }}
+
