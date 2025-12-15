@@ -169,12 +169,12 @@ notebook:
   # Username for the notebook
   username: "admin"
   
-  # Notebook image configuration
+  # Notebook image configuration (Red Hat UBI Python - always available)
   image:
-    repository: quay.io/modh/odh-minimal-notebook-image-n
-    tag: "2024.2"
+    repository: registry.access.redhat.com/ubi9/python-311
+    tag: "1-77"
     pullPolicy: IfNotPresent
-    name: "Minimal Python"  # Display name for the image
+    name: "Python 3.11"  # Display name for the image
   
   # Resource configuration
   resources:
@@ -203,15 +203,18 @@ notebook:
   # MinIO connection information  
   minio:
     endpoint: "http://fraud-detection-minio:9000"
+    defaultBucket: "my-storage"  # Default bucket for data connections
   
   # OpenShift AI specific configuration
   openshiftAI:
     host: ""  # Will be set in OpenShift-specific values
+    dataConnections:
+      enabled: true  # Create OpenShift AI data connections for MinIO and LakeFS
   
   # Git sync configuration to clone notebooks
   gitSync:
     enabled: false  # Set to true to automatically clone notebooks from git
-    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
     branch: "main"
     image: "alpine/git:latest"
 

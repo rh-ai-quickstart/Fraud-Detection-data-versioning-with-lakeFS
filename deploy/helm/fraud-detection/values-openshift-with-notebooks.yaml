@@ -47,10 +47,10 @@ notebook:
   enabled: true
   username: "admin"
   
-  # Notebook image - ODH/RHODS compatible
+  # Notebook image - Standard Jupyter (publicly available, no building required!)
   image:
-    repository: quay.io/modh/odh-minimal-notebook-image-n
-    tag: "2024.2"
+    repository: quay.io/jupyter/minimal-notebook
+    tag: "2024-11-19"
     pullPolicy: IfNotPresent
     name: "Minimal Python"
   
@@ -91,7 +91,7 @@ notebook:
   # Git sync - automatically clone demo notebooks
   gitSync:
     enabled: true
-    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
     branch: "main"
     image: "alpine/git:latest"
 

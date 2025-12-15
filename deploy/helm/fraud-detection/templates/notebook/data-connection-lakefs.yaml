@@ -1,0 +1,29 @@
+{{- if and .Values.notebook.enabled .Values.global.openshift .Values.notebook.openshiftAI.dataConnections.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-lakefs-connection
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/managed: "true"
+  annotations:
+    opendatahub.io/connection-type: "uri"
+    openshift.io/display-name: "LakeFS Data Versioning (Fraud Detection)"
+type: Opaque
+stringData:
+  # LakeFS endpoint
+  URI: {{ .Values.notebook.lakefs.url | quote }}
+  # LakeFS credentials (compatible with S3 clients)
+  AWS_ACCESS_KEY_ID: {{ .Values.lakefs.adminCredentials.accessKeyId | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.lakefs.adminCredentials.secretAccessKey | quote }}
+  AWS_S3_ENDPOINT: {{ .Values.notebook.lakefs.url | quote }}
+  AWS_DEFAULT_REGION: "us-east-1"
+  # LakeFS specific
+  LAKEFS_ENDPOINT: {{ .Values.notebook.lakefs.url | quote }}
+  LAKEFS_ACCESS_KEY_ID: {{ .Values.lakefs.adminCredentials.accessKeyId | quote }}
+  LAKEFS_SECRET_ACCESS_KEY: {{ .Values.lakefs.adminCredentials.secretAccessKey | quote }}
+{{- end }}
+

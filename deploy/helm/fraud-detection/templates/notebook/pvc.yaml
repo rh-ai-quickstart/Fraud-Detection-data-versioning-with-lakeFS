@@ -1,4 +1,4 @@
-{{- if .Values.notebook.enabled }}
+{{- if and .Values.notebook.enabled .Values.global.openshift }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -7,6 +7,11 @@ metadata:
   labels:
     {{- include "fraud-detection.labels" . | nindent 4 }}
     app.kubernetes.io/component: notebook
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "Fraud Detection Notebook Workspace"
+    helm.sh/resource-policy: keep
+    helm.sh/hook-weight: "-5"
 spec:
   accessModes:
     - ReadWriteOnce

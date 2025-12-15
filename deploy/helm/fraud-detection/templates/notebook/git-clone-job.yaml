@@ -10,9 +10,9 @@ metadata:
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "10"
-    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-failed
 spec:
-  backoffLimit: 3
+  backoffLimit: 6
   template:
     metadata:
       labels:
@@ -29,11 +29,18 @@ spec:
         - -c
         - |
           echo "Waiting for PVC to be bound..."
-          until [ -d /workspace ]; do
-            echo "PVC not yet available, waiting..."
-            sleep 2
+          RETRIES=30
+          COUNT=0
+          until [ -d /workspace ] && [ -w /workspace ]; do
+            COUNT=$((COUNT+1))
+            if [ $COUNT -ge $RETRIES ]; then
+              echo "PVC not ready after $RETRIES attempts, giving up"
+              exit 1
+            fi
+            echo "PVC not yet available, waiting... (attempt $COUNT/$RETRIES)"
+            sleep 5
           done
-          echo "PVC is ready"
+          echo "PVC is ready and writable"
         volumeMounts:
         - name: workspace
           mountPath: /workspace
@@ -53,32 +60,47 @@ spec:
             exit 0
           fi
           
-          # Clone the repository
+          # Clone the repository with retry logic
           echo "Cloning repository: {{ .Values.notebook.gitSync.repo }}"
-          git clone --depth 1 {{ if .Values.notebook.gitSync.branch }}--branch {{ .Values.notebook.gitSync.branch }}{{ end }} {{ .Values.notebook.gitSync.repo }} /tmp/repo
+          RETRIES=5
+          COUNT=0
+          until git clone --depth 1 {{ if .Values.notebook.gitSync.branch }}--branch {{ .Values.notebook.gitSync.branch }}{{ end }} {{ .Values.notebook.gitSync.repo }} /tmp/repo; do
+            COUNT=$((COUNT+1))
+            if [ $COUNT -ge $RETRIES ]; then
+              echo "Failed to clone repository after $RETRIES attempts"
+              echo "This may be due to network issues. You can manually clone the notebooks later."
+              exit 0  # Exit gracefully to not block installation
+            fi
+            echo "Clone failed, retrying in 10 seconds... (attempt $COUNT/$RETRIES)"
+            sleep 10
+          done
           
           # Copy notebooks to workspace
           echo "Copying notebooks to workspace..."
           mkdir -p demo/notebooks
-          cp -r /tmp/repo/demo/notebooks/* demo/notebooks/ || echo "No notebooks found in demo/notebooks"
+          if [ -d "/tmp/repo/demo/notebooks" ]; then
+            cp -r /tmp/repo/demo/notebooks/* demo/notebooks/ 2>/dev/null || echo "Warning: Some notebooks may not have been copied"
+          else
+            echo "Warning: No notebooks directory found in repository"
+          fi
           
           # Copy scripts if they exist
           if [ -d "/tmp/repo/demo/scripts" ]; then
             mkdir -p demo/scripts
-            cp -r /tmp/repo/demo/scripts/* demo/scripts/
+            cp -r /tmp/repo/demo/scripts/* demo/scripts/ 2>/dev/null || echo "Warning: Some scripts may not have been copied"
           fi
           
           # Copy pipelines if they exist
           if [ -d "/tmp/repo/demo/pipelines" ]; then
             mkdir -p demo/pipelines
-            cp -r /tmp/repo/demo/pipelines/* demo/pipelines/
+            cp -r /tmp/repo/demo/pipelines/* demo/pipelines/ 2>/dev/null || echo "Warning: Some pipelines may not have been copied"
           fi
           
           # Clean up
           rm -rf /tmp/repo
           
           echo "Notebooks successfully copied to workspace"
-          ls -la demo/notebooks/
+          ls -la demo/notebooks/ 2>/dev/null || echo "Notebooks directory is empty or doesn't exist"
         volumeMounts:
         - name: workspace
           mountPath: /workspace

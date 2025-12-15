@@ -41,13 +41,21 @@ lakefs:
 notebook:
   enabled: true  # Enable notebook for OpenShift AI
   
+  # Use image from OpenShift AI - UPDATE THIS WITH YOUR CLUSTER'S IMAGE
+  # Run: oc get imagestreams -n redhat-ods-applications
+  # Common options: s2i-minimal-notebook, s2i-generic-data-science-notebook
+  image:
+    repository: quay.io/jupyter/minimal-notebook
+    tag: "python-3.11"
+    pullPolicy: IfNotPresent
+  
   # OpenShift AI specific settings
   openshiftAI:
-    host: "rhods-dashboard-redhat-ods-applications.apps.your-cluster.example.com"  # Update with your cluster's route
+    host: "rhods-dashboard-redhat-ods-applications.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com"
   
   # Git sync to automatically clone notebooks
   gitSync:
     enabled: true  # Automatically clone notebooks from repository
-    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
+    repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
     branch: "main"
 

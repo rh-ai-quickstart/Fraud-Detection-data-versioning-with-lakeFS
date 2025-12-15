@@ -12,6 +12,7 @@ metadata:
   annotations:
     notebooks.opendatahub.io/inject-oauth: "true"
     opendatahub.io/username: {{ .Values.notebook.username | default "admin" | quote }}
+    helm.sh/hook-weight: "0"
 spec:
   template:
     spec:
@@ -23,15 +24,32 @@ spec:
         workingDir: /opt/app-root/src
         env:
         - name: NOTEBOOK_ARGS
-          value: |-
+          value: >-
             --ServerApp.port=8888
             --ServerApp.token=''
             --ServerApp.password=''
             --ServerApp.base_url=/notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook
             --ServerApp.quit_button=False
-            --ServerApp.tornado_settings={"user":"{{ .Values.notebook.username | default "admin" }}","hub_host":"https://{{ .Values.notebook.openshiftAI.host }}","hub_prefix":"/projects/{{ .Release.Namespace }}"}
+        - name: RESTARTABLE
+          value: "yes"
         - name: JUPYTER_IMAGE
           value: {{ .Values.notebook.image.repository }}:{{ .Values.notebook.image.tag }}
+        # Jupyter runtime directories - set to writable locations for OpenShift
+        - name: JUPYTER_RUNTIME_DIR
+          value: /opt/app-root/src/.jupyter/runtime
+        - name: JUPYTER_DATA_DIR
+          value: /opt/app-root/src/.jupyter/data
+        - name: JUPYTER_CONFIG_DIR
+          value: /opt/app-root/src/.jupyter/config
+        # IPython configuration
+        - name: IPYTHONDIR
+          value: /opt/app-root/src/.ipython
+        # Set HOME to writable location for OpenShift arbitrary UIDs
+        - name: HOME
+          value: /opt/app-root/src
+        # Disable conda config file in home directory
+        - name: CONDARC
+          value: /opt/app-root/src/.condarc
         # LakeFS connection information
         - name: LAKEFS_ENDPOINT
           value: {{ .Values.notebook.lakefs.url }}
@@ -73,10 +91,20 @@ spec:
           requests:
             cpu: {{ .Values.notebook.resources.requests.cpu | quote }}
             memory: {{ .Values.notebook.resources.requests.memory | quote }}
+        startupProbe:
+          httpGet:
+            scheme: HTTP
+            path: /notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook/api
+            port: notebook-port
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 60
         livenessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 1
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
           httpGet:
@@ -84,9 +112,9 @@ spec:
             path: /notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook/api
             port: notebook-port
         readinessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 1
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
           httpGet:
