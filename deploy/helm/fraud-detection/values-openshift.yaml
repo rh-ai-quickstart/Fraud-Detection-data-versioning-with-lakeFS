@@ -222,6 +222,6 @@ notebook:
   gitSync:
     enabled: true  # Automatically clone notebooks from repository
     repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
-    branch: "main"
+    branch: "rj_notebooks"
     image: "alpine/git:latest"
 
