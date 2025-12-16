@@ -97,7 +97,7 @@ lakefs:
     name: ""  # Defaults to minio fullname
     secret_key: minio_fraud_user
     secret_access_key: minio_fraud_password
-    endpoint: http://fraud-detection-lakefs:8000
+    endpoint: http://fraud-detection-lakefs
 
     repo_name: my-storage
     default_region: us-east-1
@@ -205,7 +205,7 @@ notebook:
   
   # LakeFS connection information
   lakefs:
-    url: "http://fraud-detection-lakefs:8000"
+    url: "http://fraud-detection-lakefs"
   
   # MinIO connection information  
   minio:
