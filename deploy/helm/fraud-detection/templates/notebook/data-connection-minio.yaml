@@ -16,8 +16,8 @@ type: Opaque
 stringData:
   AWS_ACCESS_KEY_ID: {{ .Values.minio.secret.user | quote }}
   AWS_SECRET_ACCESS_KEY: {{ .Values.minio.secret.password | quote }}
-  AWS_S3_ENDPOINT: {{ .Values.secret.minio.endpoint | quote }}
+  AWS_S3_ENDPOINT: {{ .Values.minio.secret.endpoint | quote }}
   AWS_DEFAULT_REGION: "us-east-1"
-  AWS_S3_BUCKET: {{ .Values.secret.minio.defaultBucket | default "pipeline-artifacts" | quote }}
+  AWS_S3_BUCKET: {{ .Values.minio.secret.defaultBucket | default "pipeline-artifacts" | quote }}
 {{- end }}
 
