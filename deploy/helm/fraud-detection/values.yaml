@@ -149,7 +149,7 @@ lakefs:
     blockstore:
       type: s3
       s3:
-        endpoint: http://fraud-detection-minio:9000
+        endpoint: http://minio:9000
         forcePathStyle: true
         discoverBucketRegion: false
         region: ""
@@ -210,11 +210,11 @@ notebook:
   
   # LakeFS connection information
   lakefs:
-    url: "http://fraud-detection-lakefs:8000"
+    url: "http://lakefs:8000"
   
   # MinIO connection information  
   minio:
-    endpoint: "http://fraud-detection-minio:9000"
+    endpoint: "http://minio:9000"
     defaultBucket: "my-storage"  # Default bucket for data connections
   
   # OpenShift AI specific configuration

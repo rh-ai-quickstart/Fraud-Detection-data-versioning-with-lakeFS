@@ -145,10 +145,10 @@ Total deployment time: 5-10 minutes
 
 ```bash
 # LakeFS UI
-oc get route fraud-detection-lakefs -n fraud-detection -o jsonpath='{.spec.host}'
+oc get route lakefs -n fraud-detection -o jsonpath='{.spec.host}'
 
 # MinIO Console
-oc get route fraud-detection-minio-console -n fraud-detection -o jsonpath='{.spec.host}'
+oc get route minio-console -n fraud-detection -o jsonpath='{.spec.host}'
 ```
 
 ### Accessing Notebooks (OpenShift AI)
@@ -181,11 +181,11 @@ oc get notebook fraud-detection-notebook -n fraud-detection \
 
 ```bash
 # LakeFS UI
-kubectl port-forward svc/fraud-detection-lakefs 8000:80 -n fraud-detection
+kubectl port-forward svc/lakefs 8000:80 -n fraud-detection
 # Access at http://localhost:8000
 
 # MinIO Console
-kubectl port-forward svc/fraud-detection-minio 9090:9090 -n fraud-detection
+kubectl port-forward svc/minio 9090:9090 -n fraud-detection
 # Access at http://localhost:9090
 ```
 
@@ -421,8 +421,8 @@ kubectl get pods -n fraud-detection -w
 kubectl get jobs -n fraud-detection
 
 # Check specific job logs
-kubectl logs -n fraud-detection job/fraud-detection-minio-create-buckets
-kubectl logs -n fraud-detection job/fraud-detection-lakefs-create-repos
+kubectl logs -n fraud-detection job/minio-create-buckets
+kubectl logs -n fraud-detection job/lakefs-create-repos
 ```
 
 ### Follow LakeFS Logs
@@ -442,11 +442,11 @@ kubectl get all -n fraud-detection
 Check StatefulSet and PVC status:
 ```bash
 # Check StatefulSet
-kubectl get statefulset fraud-detection-minio -n fraud-detection
+kubectl get statefulset minio -n fraud-detection
 
 # Check PVC (auto-created by StatefulSet)
 kubectl get pvc -n fraud-detection
-kubectl describe pvc minio-data-fraud-detection-minio-0 -n fraud-detection
+kubectl describe pvc minio-data-minio-0 -n fraud-detection
 ```
 
 ### LakeFS Stuck in Init State
@@ -454,7 +454,7 @@ kubectl describe pvc minio-data-fraud-detection-minio-0 -n fraud-detection
 Check if MinIO is running:
 ```bash
 kubectl get pods -n fraud-detection -l app.kubernetes.io/name=minio
-kubectl logs -n fraud-detection deployment/fraud-detection-lakefs -c wait-for-minio
+kubectl logs -n fraud-detection deployment/lakefs -c wait-for-minio
 ```
 
 ### Repositories Not Created
@@ -462,12 +462,12 @@ kubectl logs -n fraud-detection deployment/fraud-detection-lakefs -c wait-for-mi
 Check if the job ran:
 ```bash
 kubectl get jobs -n fraud-detection
-kubectl logs -n fraud-detection job/fraud-detection-lakefs-create-repos
+kubectl logs -n fraud-detection job/lakefs-create-repos
 ```
 
 Manually create repositories if needed:
 ```bash
-LAKEFS_URL=$(oc get route fraud-detection-lakefs -n fraud-detection -o jsonpath='{.spec.host}')
+LAKEFS_URL=$(oc get route lakefs -n fraud-detection -o jsonpath='{.spec.host}')
 
 curl -k -u "something:simple" \
   -X POST \

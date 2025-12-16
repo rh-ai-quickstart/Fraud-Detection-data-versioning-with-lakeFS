@@ -76,11 +76,11 @@ notebook:
   
   # LakeFS connection
   lakefs:
-    url: "http://fraud-detection-lakefs:8000"
+    url: "http://lakefs:8000"
   
   # MinIO connection
   minio:
-    endpoint: "http://fraud-detection-minio:9000"
+    endpoint: "http://minio:9000"
   
   # OpenShift AI specific settings
   openshiftAI:
