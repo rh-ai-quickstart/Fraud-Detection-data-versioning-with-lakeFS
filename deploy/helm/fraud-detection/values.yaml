@@ -67,7 +67,7 @@ minio:
     name: pipeline-artifacts
     secret_key: something
     secret_access_key: simple
-    endpoint: https://minio-api-fraud-detection.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+    endpoint: https://minio-api-lakefs.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com
     defaultBucket: pipeline-artifacts
   
   openshift:
@@ -181,7 +181,7 @@ notebook:
   username: "admin"
   
   # Notebook image configuration (Red Hat UBI Python - always available)
-  # image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/tensorflow:2025.2
+  #image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/tensorflow:2025.2
   image:
     repository: registry.access.redhat.com/redhat-ods-applications/tensorflow
     tag: "2025.2"
