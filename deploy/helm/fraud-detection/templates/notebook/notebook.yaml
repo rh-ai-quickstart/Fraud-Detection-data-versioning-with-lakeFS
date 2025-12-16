@@ -61,6 +61,17 @@ spec:
           value: {{ .Values.lakefs.secret.notebook_access_key_id }}
         - name: LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY
           value: {{ .Values.lakefs.secret.notebook_secret_access_key }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.minio.secret.secret_key }}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: {{ .Values.minio.secret.secret_access_key }}
+        - name: AWS_S3_ENDPOINT
+          value: {{ .Values.minio.secret.endpoint }}
+        - name: AWS_DEFAULT_REGION
+          value: {{ .Values.minio.secret.default_region | default "us-east-1" }}
+        - name: AWS_S3_BUCKET
+          value: {{ .Values.minio.secret.defaultBucket }}
+
         ports:
         - containerPort: 8888
           name: notebook-port
