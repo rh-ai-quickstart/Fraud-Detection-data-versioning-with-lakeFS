@@ -16,7 +16,7 @@ spec:
         {{- include "lakefs.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default "default" }}
       containers:
         - name: create-repos
           image: curlimages/curl:latest

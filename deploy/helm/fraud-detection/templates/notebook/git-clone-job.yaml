@@ -54,10 +54,10 @@ spec:
           set -e
           cd /workspace
           
-          # Check if notebooks already exist
-          if [ -d "demo/notebooks" ] && [ "$(ls -A demo/notebooks 2>/dev/null)" ]; then
-            echo "Notebooks already exist in workspace, skipping clone"
-            exit 0
+          # Clean existing demo folder if it exists
+          if [ -d "demo" ]; then
+            echo "Removing existing demo folder..."
+            rm -rf demo
           fi
           
           # Clone the repository with retry logic
@@ -75,32 +75,42 @@ spec:
             sleep 10
           done
           
-          # Copy notebooks to workspace
-          echo "Copying notebooks to workspace..."
-          mkdir -p demo/notebooks
-          if [ -d "/tmp/repo/demo/notebooks" ]; then
-            cp -r /tmp/repo/demo/notebooks/* demo/notebooks/ 2>/dev/null || echo "Warning: Some notebooks may not have been copied"
+          # Copy entire demo folder to workspace
+          echo "Copying entire demo folder to workspace..."
+          if [ -d "/tmp/repo/demo" ]; then
+            # Show what we're about to copy
+            echo "Source demo folder structure:"
+            find /tmp/repo/demo -type f | head -20
+            
+            # Force copy entire demo folder with all contents
+            cp -rf /tmp/repo/demo . || {
+              echo "Error: Failed to copy demo folder"
+              exit 1
+            }
+            
+            # Verify the copy was successful
+            if [ ! -d "demo" ]; then
+              echo "Error: Demo folder not found after copy"
+              exit 1
+            fi
+            
+            echo "Demo folder successfully copied to workspace"
+            echo "Copied demo folder structure:"
+            find demo -type f | wc -l | xargs echo "Total files copied:"
+            ls -la demo/
+            
+            # Show subdirectories
+            echo "Demo subdirectories:"
+            ls -la demo/ 2>/dev/null || echo "No subdirectories found"
           else
-            echo "Warning: No notebooks directory found in repository"
-          fi
-          
-          # Copy scripts if they exist
-          if [ -d "/tmp/repo/demo/scripts" ]; then
-            mkdir -p demo/scripts
-            cp -r /tmp/repo/demo/scripts/* demo/scripts/ 2>/dev/null || echo "Warning: Some scripts may not have been copied"
-          fi
-          
-          # Copy pipelines if they exist
-          if [ -d "/tmp/repo/demo/pipelines" ]; then
-            mkdir -p demo/pipelines
-            cp -r /tmp/repo/demo/pipelines/* demo/pipelines/ 2>/dev/null || echo "Warning: Some pipelines may not have been copied"
+            echo "Error: No demo directory found in repository"
+            exit 1
           fi
           
           # Clean up
           rm -rf /tmp/repo
           
-          echo "Notebooks successfully copied to workspace"
-          ls -la demo/notebooks/ 2>/dev/null || echo "Notebooks directory is empty or doesn't exist"
+          echo "Clone completed successfully"
         volumeMounts:
         - name: workspace
           mountPath: /workspace
