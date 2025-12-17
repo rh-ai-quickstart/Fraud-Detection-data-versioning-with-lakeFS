@@ -52,7 +52,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 LakeFS fullname
 */}}
 {{- define "lakefs.fullname" -}}
-{{- printf "%s-lakefs" .Release.Name | trunc 63 | trimSuffix "-" }}
+lakefs
 {{- end }}
 
 {{/*
@@ -93,7 +93,7 @@ Create the name of the service account to use
 MinIO fullname
 */}}
 {{- define "minio.fullname" -}}
-{{- printf "%s-minio" .Release.Name | trunc 63 | trimSuffix "-" }}
+minio
 {{- end }}
 
 {{/*

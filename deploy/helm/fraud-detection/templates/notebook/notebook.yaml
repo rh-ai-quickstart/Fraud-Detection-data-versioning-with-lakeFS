@@ -1,0 +1,136 @@
+{{- if and .Values.notebook.enabled .Values.global.openshift }}
+apiVersion: kubeflow.org/v1
+kind: Notebook
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-notebook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/odh-managed: "true"
+  annotations:
+    notebooks.opendatahub.io/inject-oauth: "true"
+    opendatahub.io/username: {{ .Values.notebook.username | default "admin" | quote }}
+    helm.sh/hook-weight: "0"
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      containers:
+      - name: {{ include "fraud-detection.fullname" . }}-notebook
+        image: {{ .Values.notebook.image.repository }}:{{ .Values.notebook.image.tag }}
+        imagePullPolicy: {{ .Values.notebook.image.pullPolicy }}
+        workingDir: /opt/app-root/src
+        env:
+        - name: NOTEBOOK_ARGS
+          value: >-
+            --ServerApp.port=8888
+            --ServerApp.token=''
+            --ServerApp.password=''
+            --ServerApp.base_url=/notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook
+            --ServerApp.quit_button=False
+        - name: RESTARTABLE
+          value: "yes"
+        - name: JUPYTER_IMAGE
+          value: {{ .Values.notebook.image.repository }}:{{ .Values.notebook.image.tag }}
+        # Jupyter runtime directories - set to writable locations for OpenShift
+        - name: JUPYTER_RUNTIME_DIR
+          value: /opt/app-root/src/.jupyter/runtime
+        - name: JUPYTER_DATA_DIR
+          value: /opt/app-root/src/.jupyter/data
+        - name: JUPYTER_CONFIG_DIR
+          value: /opt/app-root/src/.jupyter/config
+        # IPython configuration
+        - name: IPYTHONDIR
+          value: /opt/app-root/src/.ipython
+        # Set HOME to writable location for OpenShift arbitrary UIDs
+        - name: HOME
+          value: /opt/app-root/src
+        # Disable conda config file in home directory
+        - name: CONDARC
+          value: /opt/app-root/src/.condarc
+        # LakeFS connection information
+        - name: LAKECTL_SERVER_ENDPOINT_URL
+          value: {{ .Values.lakefs.secret.endpoint }}
+        - name: LAKEFS_REPO_NAME
+          value: {{ .Values.lakefs.secret.repo_name }}
+        - name: LAKEFS_DEFAULT_REGION
+          value: {{ .Values.lakefs.secret.default_region }}
+        - name: LAKECTL_CREDENTIALS_ACCESS_KEY_ID
+          value: {{ .Values.lakefs.secret.notebook_access_key_id }}
+        - name: LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY
+          value: {{ .Values.lakefs.secret.notebook_secret_access_key }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.minio.secret.secret_key }}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: {{ .Values.minio.secret.secret_access_key }}
+        - name: AWS_S3_ENDPOINT
+          value: {{ .Values.minio.secret.endpoint }}
+        - name: AWS_DEFAULT_REGION
+          value: {{ .Values.minio.secret.default_region | default "us-east-1" }}
+        - name: AWS_S3_BUCKET
+          value: {{ .Values.minio.secret.defaultBucket }}
+        ports:
+        - containerPort: 8888
+          name: notebook-port
+          protocol: TCP
+        resources:
+          limits:
+            cpu: {{ .Values.notebook.resources.limits.cpu | quote }}
+            memory: {{ .Values.notebook.resources.limits.memory | quote }}
+          requests:
+            cpu: {{ .Values.notebook.resources.requests.cpu | quote }}
+            memory: {{ .Values.notebook.resources.requests.memory | quote }}
+        startupProbe:
+          httpGet:
+            scheme: HTTP
+            path: /notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook/api
+            port: notebook-port
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 60
+        livenessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            scheme: HTTP
+            path: /notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook/api
+            port: notebook-port
+        readinessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            scheme: HTTP
+            path: /notebook/{{ .Release.Namespace }}/{{ include "fraud-detection.fullname" . }}-notebook/api
+            port: notebook-port
+        volumeMounts:
+        - name: workspace
+          mountPath: /opt/app-root/src
+        {{- if .Values.notebook.shm.enabled }}
+        - name: shm
+          mountPath: /dev/shm
+        {{- end }}
+      volumes:
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: {{ include "fraud-detection.fullname" . }}-notebook-pvc
+      - name: notebooks-config
+        configMap:
+          name: {{ include "fraud-detection.fullname" . }}-notebooks
+      {{- if .Values.notebook.shm.enabled }}
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: {{ .Values.notebook.shm.size }}
+      {{- end }}
+{{- end }}
+

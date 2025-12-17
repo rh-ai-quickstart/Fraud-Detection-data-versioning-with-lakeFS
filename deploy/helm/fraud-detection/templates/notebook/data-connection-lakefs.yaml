@@ -1,0 +1,23 @@
+{{- if and .Values.notebook.enabled .Values.global.openshift .Values.notebook.openshiftAI.dataConnections.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-storage
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/managed: "true"
+  annotations:
+    opendatahub.io/connection-type: "s3"
+    openshift.io/display-name: "my-storage"
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: {{ .Values.lakefs.secret.secret_key | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.lakefs.secret.secret_access_key | quote }}
+  AWS_S3_ENDPOINT: {{ .Values.lakefs.secret.endpoint | quote }}
+  AWS_DEFAULT_REGION: "us-east-1"
+  AWS_S3_BUCKET: {{ .Values.lakefs.secret.defaultBucket | default "my-storage" | quote }}
+{{- end }}
+

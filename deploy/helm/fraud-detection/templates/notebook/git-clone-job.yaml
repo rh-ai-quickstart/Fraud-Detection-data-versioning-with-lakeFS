@@ -1,0 +1,122 @@
+{{- if and .Values.notebook.enabled .Values.notebook.gitSync.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-clone-notebooks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: notebook
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-failed
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: notebook-setup
+    spec:
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-pvc
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for PVC to be bound..."
+          RETRIES=30
+          COUNT=0
+          until [ -d /workspace ] && [ -w /workspace ]; do
+            COUNT=$((COUNT+1))
+            if [ $COUNT -ge $RETRIES ]; then
+              echo "PVC not ready after $RETRIES attempts, giving up"
+              exit 1
+            fi
+            echo "PVC not yet available, waiting... (attempt $COUNT/$RETRIES)"
+            sleep 5
+          done
+          echo "PVC is ready and writable"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      containers:
+      - name: git-clone
+        image: {{ .Values.notebook.gitSync.image }}
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          cd /workspace
+          
+          # Clean existing demo folder if it exists
+          if [ -d "demo" ]; then
+            echo "Removing existing demo folder..."
+            rm -rf demo
+          fi
+          
+          # Clone the repository with retry logic
+          echo "Cloning repository: {{ .Values.notebook.gitSync.repo }}"
+          RETRIES=5
+          COUNT=0
+          until git clone --depth 1 {{ if .Values.notebook.gitSync.branch }}--branch {{ .Values.notebook.gitSync.branch }}{{ end }} {{ .Values.notebook.gitSync.repo }} /tmp/repo; do
+            COUNT=$((COUNT+1))
+            if [ $COUNT -ge $RETRIES ]; then
+              echo "Failed to clone repository after $RETRIES attempts"
+              echo "This may be due to network issues. You can manually clone the notebooks later."
+              exit 0  # Exit gracefully to not block installation
+            fi
+            echo "Clone failed, retrying in 10 seconds... (attempt $COUNT/$RETRIES)"
+            sleep 10
+          done
+          
+          # Copy entire demo folder to workspace
+          echo "Copying entire demo folder to workspace..."
+          if [ -d "/tmp/repo/demo" ]; then
+            # Show what we're about to copy
+            echo "Source demo folder structure:"
+            find /tmp/repo/demo -type f | head -20
+            
+            # Force copy entire demo folder with all contents
+            cp -rf /tmp/repo/demo . || {
+              echo "Error: Failed to copy demo folder"
+              exit 1
+            }
+            
+            # Verify the copy was successful
+            if [ ! -d "demo" ]; then
+              echo "Error: Demo folder not found after copy"
+              exit 1
+            fi
+            
+            echo "Demo folder successfully copied to workspace"
+            echo "Copied demo folder structure:"
+            find demo -type f | wc -l | xargs echo "Total files copied:"
+            ls -la demo/
+            
+            # Show subdirectories
+            echo "Demo subdirectories:"
+            ls -la demo/ 2>/dev/null || echo "No subdirectories found"
+          else
+            echo "Error: No demo directory found in repository"
+            exit 1
+          fi
+          
+          # Clean up
+          rm -rf /tmp/repo
+          
+          echo "Clone completed successfully"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: {{ include "fraud-detection.fullname" . }}-notebook-pvc
+{{- end }}
+

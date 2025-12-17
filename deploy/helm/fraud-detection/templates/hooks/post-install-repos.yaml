@@ -8,7 +8,7 @@ metadata:
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "5"
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   template:
     metadata:
@@ -16,7 +16,7 @@ spec:
         {{- include "lakefs.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default "default" }}
       containers:
         - name: create-repos
           image: curlimages/curl:latest
