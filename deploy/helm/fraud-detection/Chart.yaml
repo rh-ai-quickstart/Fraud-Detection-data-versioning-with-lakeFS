@@ -1,6 +1,6 @@
 apiVersion: v2
 name: fraud-detection
-description: Fraud Detection with LakeFS and MinIO for data versioning
+description: Fraud Detection with lakeFS and MinIO for data versioning
 type: application
 version: 1.0.0
 appVersion: "1.0"

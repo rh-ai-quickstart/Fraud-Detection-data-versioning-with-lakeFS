@@ -50,7 +50,7 @@ spec:
         # Disable conda config file in home directory
         - name: CONDARC
           value: /opt/app-root/src/.condarc
-        # LakeFS connection information
+        # lakeFS connection information
         - name: LAKECTL_SERVER_ENDPOINT_URL
           value: {{ .Values.lakefs.secret.endpoint }}
         - name: LAKEFS_REPO_NAME
