@@ -85,11 +85,13 @@ install: create-namespace ## Install the fraud-detection Helm chart
 	fi
 	@echo "Installation complete!"
 
-.PHONY: uninstall
-uninstall: ## Uninstall the fraud-detection Helm chart
+.PHONY: uninstall 
+uninstall:
 	@echo "Uninstalling $(RELEASE_NAME) from namespace $(NAMESPACE)..."
 	@helm uninstall $(RELEASE_NAME) --namespace $(NAMESPACE) || echo "Release $(RELEASE_NAME) not found"
+	@oc delete namespace $(NAMESPACE) || echo "Namespace $(NAMESPACE) not found so skipping deletion"
 	@echo "Uninstall complete!"
+
 
 ##@ Status and Information
 .PHONY: get-pods
