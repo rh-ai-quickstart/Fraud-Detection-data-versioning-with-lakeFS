@@ -88,6 +88,7 @@ install: create-namespace ## Install the fraud-detection Helm chart
 .PHONY: uninstall 
 uninstall:
 	@echo "Uninstalling $(RELEASE_NAME) from namespace $(NAMESPACE)..."
+	# This will delete the release and the namespace becuase there is persistent volume claims in the namespace
 	@helm uninstall $(RELEASE_NAME) --namespace $(NAMESPACE) || echo "Release $(RELEASE_NAME) not found"
 	@oc delete namespace $(NAMESPACE) || echo "Namespace $(NAMESPACE) not found so skipping deletion"
 	@echo "Uninstall complete!"
