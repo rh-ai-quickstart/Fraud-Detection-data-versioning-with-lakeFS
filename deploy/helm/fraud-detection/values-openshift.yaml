@@ -66,6 +66,9 @@ minio:
     secret_access_key: simple
     endpoint: https://minio-api-lakefs.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com
     defaultBucket: pipeline-artifacts
+    # Override for subchart
+    user: minio_user
+    password: minio_password
   
   openshift:
     enabled: true

@@ -115,9 +115,6 @@ spec:
         volumeMounts:
         - name: workspace
           mountPath: /opt/app-root/src
-        - name: notebooks-config
-          mountPath: /opt/app-root/src/QUICKSTART.md
-          subPath: QUICKSTART.md
         {{- if .Values.notebook.shm.enabled }}
         - name: shm
           mountPath: /dev/shm
