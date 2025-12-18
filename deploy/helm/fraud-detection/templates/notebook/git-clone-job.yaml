@@ -19,6 +19,16 @@ spec:
         {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: notebook-setup
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: statefulset
+                operator: In
+                values:
+                - lakefs-notebook
+            topologyKey: "kubernetes.io/hostname"
       serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
       restartPolicy: OnFailure
       initContainers:

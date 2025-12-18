@@ -219,7 +219,8 @@ notebook:
   
   # OpenShift AI specific settings
   openshiftAI:
-    host: "rhods-dashboard-redhat-ods-applications.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com"
+    host: "rhods-dashboard-redhat-ods-applications.apps.ai-dev02.kni.syseng.devcluster.openshift.com"
+    # host: "rhods-dashboard-redhat-ods-applications.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com"
     dataConnections:
       enabled: true  # Create OpenShift AI data connections for MinIO and LakeFS
   
