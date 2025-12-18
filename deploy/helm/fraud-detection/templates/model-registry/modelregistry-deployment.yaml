@@ -1,0 +1,40 @@
+{{- if and .Values.mysql.enabled .Values.modelRegistry.enabled .Values.modelRegistry.createService }}
+---
+apiVersion: modelregistry.opendatahub.io/v1alpha1
+kind: ModelRegistry
+metadata:
+  name: {{ .Values.modelRegistry.name | default "model-registry" }}
+  namespace: {{ .Values.modelRegistry.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.modelRegistry.name | default "model-registry" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+spec:
+  grpc:
+    port: {{ .Values.modelRegistry.grpcPort | default 9090 }}
+  rest:
+    port: {{ .Values.modelRegistry.restPort | default 8080 }}
+    serviceRoute: enabled
+  mysql:
+    host: {{ include "mysql.host" . }}
+    port: {{ .Values.mysql.port | default 3306 }}
+    database: {{ .Values.mysql.database }}
+    username: {{ .Values.mysql.user }}
+    passwordSecret:
+      name: {{ .Values.mysql.name | default "mysql" }}
+      key: database-password
+  {{- if .Values.modelRegistry.istio }}
+  istio:
+    audiences:
+      {{- toYaml .Values.modelRegistry.istio.audiences | nindent 6 }}
+    authProvider: {{ .Values.modelRegistry.istio.authProvider | default "https://kubernetes.default.svc" }}
+    {{- if .Values.modelRegistry.istio.gateway }}
+    gateway:
+      domain: {{ .Values.modelRegistry.istio.gateway.domain }}
+      grpc:
+        gatewayRoute: {{ .Values.modelRegistry.istio.gateway.grpc.gatewayRoute | default "enabled" }}
+      rest:
+        gatewayRoute: {{ .Values.modelRegistry.istio.gateway.rest.gatewayRoute | default "enabled" }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+

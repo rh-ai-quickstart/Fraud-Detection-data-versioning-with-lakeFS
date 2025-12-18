@@ -104,3 +104,24 @@ The published ai-architecture-charts MinIO creates a secret named "minio" (hardc
 minio
 {{- end }}
 
+{{/*
+MySQL fullname
+*/}}
+{{- define "mysql.fullname" -}}
+{{- .Values.mysql.name | default "mysql" }}
+{{- end }}
+
+{{/*
+MySQL connection string
+*/}}
+{{- define "mysql.connectionString" -}}
+{{- printf "mysql://%s:%s@%s:%d/%s" .Values.mysql.user .Values.mysql.password (include "mysql.fullname" .) (.Values.mysql.port | default 3306 | int) .Values.mysql.database }}
+{{- end }}
+
+{{/*
+MySQL host with namespace
+*/}}
+{{- define "mysql.host" -}}
+{{- printf "%s.%s.svc.cluster.local" (include "mysql.fullname" .) (.Values.mysql.namespace | default .Release.Namespace) }}
+{{- end }}
+

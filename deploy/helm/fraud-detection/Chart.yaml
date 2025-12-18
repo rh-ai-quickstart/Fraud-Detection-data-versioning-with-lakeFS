@@ -1,16 +1,19 @@
 apiVersion: v2
 name: fraud-detection
-description: Fraud Detection with LakeFS and MinIO for data versioning
+description: Fraud Detection with LakeFS, MinIO, and MySQL for data versioning and model registry
 type: application
-version: 1.0.0
-appVersion: "1.0"
+version: 1.1.0
+appVersion: "1.1"
 keywords:
   - lakefs
   - minio
+  - mysql
   - fraud-detection
   - data-versioning
+  - model-registry
   - openshift
   - ai-ml
+  - openshift-ai
 home: https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS
 maintainers:
   - name: Red Hat AI Quickstart Team

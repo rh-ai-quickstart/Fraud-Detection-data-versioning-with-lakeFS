@@ -219,8 +219,6 @@ notebook:
   
   # OpenShift AI specific settings
   openshiftAI:
-    host: "rhods-dashboard-redhat-ods-applications.apps.ai-dev02.kni.syseng.devcluster.openshift.com"
-    # host: "rhods-dashboard-redhat-ods-applications.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com"
     dataConnections:
       enabled: true  # Create OpenShift AI data connections for MinIO and LakeFS
   
@@ -231,3 +229,78 @@ notebook:
     branch: "rj_notebooks"
     image: "alpine/git:latest"
 
+# MySQL configuration for Model Registry
+mysql:
+  enabled: true
+  name: mysql
+  # Note: This is the namespace for the model registry. It is not the same as the namespace for the fraud detection project.
+  # namespace: rhoai-model-registries  # Target namespace for MySQL deployment
+  namespace: fraud-detection
+  
+  # Image configuration
+  image:
+    repository: quay.io/sclorg/mysql-80-c9s
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # ImageStream configuration (OpenShift only)
+  imageName: mysql
+  imageTag: latest
+  
+  # Database credentials
+  user: mysql_user
+  password: mysql_password
+  rootPassword: mysql_root_password
+  database: model_registry
+  
+  # Service configuration
+  port: 3306
+  
+  # Persistence configuration
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClassName: ""  # Use default storage class
+  
+  # Resource limits
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  
+  # Optional: Custom MySQL configuration
+  # config:
+  #   mycnf: |
+  #     [mysqld]
+  #     max_connections=100
+  #     innodb_buffer_pool_size=256M
+  #   data:
+  #     custom-key: custom-value
+
+# Model Registry configuration
+modelRegistry:
+  enabled: true  # Set to true to create Model Registry connection resources
+  createService: true  # Set to true to deploy the actual ModelRegistry CR (requires model-registry-operator)
+  name: lakefs-model-registry
+  # namespace: rhoai-model-registries  # Should match mysql.namespace or adjust accordingly
+  namespace: rhoai-model-registries
+  
+  # Service ports
+  grpcPort: 9090
+  restPort: 8080
+  
+  # Istio configuration (optional, for OpenShift Service Mesh integration)
+  istio:
+    audiences:
+      - https://kubernetes.default.svc
+    authProvider: "https://kubernetes.default.svc"
+    gateway:
+      domain: ""  # Set to your OpenShift apps domain for external access
+      grpc:
+        gatewayRoute: enabled
+      rest:
+        gatewayRoute: enabled
