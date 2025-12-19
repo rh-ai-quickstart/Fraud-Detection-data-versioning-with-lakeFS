@@ -1,6 +1,32 @@
-# Data versioning for Fraud Detectin with lakeFS
+# Fraud Detection data versioning with lakeFS (OpenShift AI)
 
-Fraud detection is a critical part of any business. Discover how data management and versioning with lakeFS enables repeatable, version-controlled data sets, using familiar workflows and processes, while reducing storage costs for generative and predictive AI applications.
+This AI quickstart demonstrates how to use **lakeFS as an AI data control plane** for Red Hat OpenShift AI using the fraud-detection tutorial workflow.
+
+You will deploy MinIO (object storage) and lakeFS, run the fraud-detection notebooks in OpenShift AI, and then repeat the workflow on a *new version of the data* to show how lakeFS enables reproducibility, safe experimentation, and governed promotion of AI data and model artifacts.
+
+---
+
+## Data plane vs control plane
+
+This quickstart intentionally separates responsibilities:
+
+- **Data plane (object storage)**  
+  MinIO / S3 stores the bytes: datasets, models, and pipeline artifacts.
+
+- **Control plane (lakeFS)**  
+  lakeFS adds Git-like semantics (branch, commit, merge, revert) and lineage metadata *on top of* the data in object storage.
+
+- **Compatibility**  
+  lakeFS exposes an **S3-compatible API**, so OpenShift AI and S3-native tools can use it as a drop-in endpoint without code changes.
+
+After running this quickstart you can answer questions like:
+
+- “Which exact dataset version trained the model that’s currently served?”
+- “What changed between the dataset used for model v1 and v2?”
+- “Can we reproduce last month’s metrics exactly?”
+- “Can we roll back immediately if a bad data update ships?”
+
+---
 
 ## Table of contents
 
@@ -26,16 +52,18 @@ The purpose of this AI quickstart is to highlight the benefits of data versionin
 
 The quickstart will allow a demonstrator to quickly deploy both object storage, using MinIO, and lakeFS to serve as a git-like gateway that data engineers can interface with for data access. The following steps can be run very quickly:
 
-1. Deploy Minio for on-premesis object storage, running on the local OpenShift cluster
-2. Deploy an instance of lakeFS for git-like management of data and data versioning
-3. Deploy fraud detection notebooks in OpenShift AI
-4. Create and train a model using the notebooks and data
-5. Serve the trained model
-6. Perform fraud detection on sample transactions data
-7. Update the training data and retrain the model using the new data version
-8. Perform fraud detection on a new version of the sample transaction data
-9. Show how OpenShift AI pipelines can be used to retrain and/or perform detection on new versions of training and sample data
+### What you’ll do (and what lakeFS adds)
 
+1. Deploy MinIO (object storage) and lakeFS (S3-compatible versioning gateway)
+2. Configure OpenShift AI to use **lakeFS as its S3 endpoint** (data connection)
+3. Run the fraud-detection notebooks to:
+   - load training data from lakeFS
+   - train a model
+   - write the model artifact back to lakeFS
+4. Create a **lakeFS branch** for a data change (e.g., updated labels / new transactions)
+5. Write updated training data to the branch, **commit** it, and retrain
+6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
+7. (Optional) Run a pipeline that reads/writes through lakeFS so pipeline outputs are also versioned
 
 ### See it in action 
 
@@ -144,15 +172,24 @@ oc delete project lakefs
 
 ## Technical details
 
-<!-- 
+lakeFS exposes an S3-compatible API. In S3 terms:
 
-*Section is optional.* 
+- **Bucket = lakeFS repository**
+- **First path segment = branch**
+- Object paths follow:
 
-Here is your chance to share technical details. 
+  s3://[REPOSITORY]/[BRANCH]/PATH/TO/OBJECT
 
-Welcome to add sections as needed. Keep additions as structured and consistent as possible.
+Example:
+- Training data:  s3://fraud/main/data/transactions.parquet
+- Experiment data: s3://fraud/exp-01/data/transactions.parquet
+- Model artifact:  s3://fraud/exp-01/models/fraud/1/model.onnx
 
--->
+In real AI platforms, the point isn’t just versioning—it’s controlled promotion:
+
+- Protect `main` so changes only arrive via merges
+- Add pre-merge hooks (Actions) to enforce data quality checks (schema, format, PII scanning)
+- Merge = “publish” approved data/model artifacts to consumers
 
 ## Tags
 
