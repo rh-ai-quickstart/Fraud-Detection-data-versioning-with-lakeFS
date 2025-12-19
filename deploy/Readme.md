@@ -1,355 +1,290 @@
-# Fraud Detection with LakeFS - Helm Chart
+# Fraud Detection with lakeFS - Deployment Guide
 
-This Helm chart deploys a complete fraud detection environment with LakeFS for data versioning and MinIO for object storage.
-
-## Overview
-
-This chart includes:
-- **MinIO** - S3-compatible object storage (v0.5.2 from ai-architecture-charts)
-- **LakeFS** - Git-like data versioning system
-- **Automated Setup** - Buckets and repositories created automatically via Helm hooks
-- **Jupyter Notebooks** - Optional OpenShift AI integration with pre-configured notebooks (see [NOTEBOOKS.md](NOTEBOOKS.md))
-
-### Chart Dependencies
-
-This chart uses the published [ai-architecture-charts](https://github.com/rh-ai-quickstart/ai-architecture-charts) MinIO chart as a dependency:
-
-```yaml
-dependencies:
-  - name: minio
-    version: 0.5.2
-    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-    condition: minio.enabled
-```
+This directory contains the Helm chart and Makefile for deploying the Fraud Detection with lakeFS demo application.
 
 ## Prerequisites
 
-- Kubernetes 1.19+ or OpenShift 4.12+
-- Helm 3.x
-- kubectl or oc CLI configured
-- PersistentVolume provisioner support (for MinIO storage)
-- **For Jupyter Notebooks**: OpenShift AI or Open Data Hub installed (OpenShift only)
-
-## Documentation
-- **[values-openshift.yaml](values-openshift.yaml)** - OpenShift-specific overrides
-- **[README.md](README.md) ** Guide for using make file and deploying the projects
+- Kubernetes cluster or OpenShift cluster
+- `kubectl` or `oc` CLI installed
+- Helm 3.x installed
+- Sufficient cluster resources (CPU, memory, storage)
 
 ## Quick Start
 
-### Deploy on OpenShift
-
-Note all deployments can be handled with the make file. 
-The Idea is to use values-openshift.yaml to configure and make commands
-to deploy. 
-
-**install** `make install`: Install chart based on values-openshift.yaml
-**uninstall** `make uninstall`: Uninstall Chart in namespace.
-
-**Clean Install** `make clean-install` : Uninstall, remove namespace, and install
-
-## Deployment Sequence
-
-The chart manages dependencies automatically using Helm hooks and init containers:
-
-1. **Dependency Download**: `helm dependency update` downloads MinIO chart (v0.5.2)
-2. **Pre-install Hook** (weight: -10): Create ServiceAccounts and RBAC
-3. **MinIO Secret**: Static credentials created from values
-4. **MinIO StatefulSet**: Starts with persistent storage (volumeClaimTemplates)
-5. **LakeFS Init Container**: Waits for MinIO to be ready
-6. **LakeFS ConfigMap**: Configuration created from values
-7. **LakeFS Deployment**: Starts after init container succeeds
-8. **Post-install Hook** (weight: 3): Create S3 buckets in MinIO
-9. **Post-install Hook** (weight: 5): Create repositories in LakeFS
-
-Total deployment time: 5-10 minutes
-
-## What Gets Deployed
-
-### MinIO (Object Storage)
-- **Chart**: Published ai-architecture-charts MinIO v0.5.2
-- **Deployment**: StatefulSet (single replica)
-- **Storage**: 10Gi via volumeClaimTemplates (configurable)
-- **Ports**: API (9000), Console (9090)
-- **Credentials**: Static credentials from values (stored in secret `minio`)
-- **Buckets**: 3 buckets created automatically via parent chart hook
-  - `pipeline-artifacts`
-  - `my-storage`
-  - `quickstart`
-
-### LakeFS (Data Versioning)
-- **Deployment**: Single replica (configurable)
-- **Database**: Local (ephemeral) - can be configured for PostgreSQL
-- **Storage Backend**: MinIO S3
-- **Admin Credentials**: Configured in values
-- **Repositories**: 2 repositories created automatically
-  - `quickstart` (with sample data)
-  - `my-storage` (empty)
-
-### Jupyter Notebook (OpenShift AI Integration)
-- **Enabled**: Only on OpenShift with `values-openshift.yaml` (disabled by default)
-- **Custom Resource**: Kubeflow Notebook CR for OpenShift AI/Open Data Hub
-- **Image**: ODH Minimal Notebook (Python 3.9+)
-- **Storage**: 20Gi PVC for notebook workspace
-- **Pre-configured**: LakeFS and MinIO connection details via environment variables
-- **Git Sync**: Automatically clones demo notebooks from repository
-- **Notebooks Included**: 6 fraud detection notebooks with LakeFS integration
-  - `1_experiment_train_lakefs.ipynb`
-  - `2_save_model_lakefs.ipynb`
-  - `3_rest_requests_multi_model_lakefs.ipynb`
-  - `4_grpc_requests_multi_model_lakefs.ipynb`
-  - `5_rest_requests_single_model_lakefs.ipynb`
-  - `8_distributed_training_lakefs.ipynb`
-
-## Accessing Services
-
-### Get Service URLs (OpenShift)
+The simplest way to deploy is using the Makefile:
 
 ```bash
-# LakeFS UI
-oc get route lakefs -n fraud-detection -o jsonpath='{.spec.host}'
+# Display all available commands
+make help
 
-# MinIO Console
-oc get route minio-console -n fraud-detection -o jsonpath='{.spec.host}'
+# Deploy everything (creates namespace and installs Helm chart)
+make install
+
+# Check the status
+make get-pods
 ```
 
-### Accessing Notebooks (OpenShift AI)
+## Makefile Commands
 
-When deployed on OpenShift with `values-openshift.yaml`, notebooks are automatically available in the OpenShift AI dashboard:
+The Makefile provides a convenient interface for managing the deployment. Run `make help` to see all available commands and current configuration.
 
-1. Navigate to the OpenShift AI dashboard
-2. Go to the **Data Science Projects** section
-3. Select the `fraud-detection` project
-4. Click on the notebook server to access JupyterLab
-5. The demo notebooks will be automatically cloned into the `demo/notebooks/` directory
+### Configuration
 
-Alternatively, get the notebook URL directly:
+The Makefile supports the following environment variables for customization:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NAMESPACE` | `fraud-detection` | Kubernetes/OpenShift namespace |
+| `RELEASE_NAME` | `fraud-detection` | Helm release name |
+| `CHART_DIR` | `helm/fraud-detection` | Path to Helm chart directory |
+| `VALUES_FILE` | `values-openshift.yaml` | Values file to use |
+| `TIMEOUT` | `10m` | Helm installation timeout |
+
+**Example:** Override defaults:
 
 ```bash
-# Get the notebook route
-oc get notebook fraud-detection-notebook -n fraud-detection \
-  -o jsonpath='{.metadata.annotations.notebooks\.opendatahub\.io/last-activity}'
+make install NAMESPACE=my-namespace TIMEOUT=15m
 ```
 
-**Pre-configured Environment Variables:**
-- `LAKEFS_ENDPOINT`: LakeFS API endpoint
-- `LAKEFS_ACCESS_KEY_ID`: LakeFS access key
-- `LAKEFS_SECRET_ACCESS_KEY`: LakeFS secret key
-- `AWS_S3_ENDPOINT`: MinIO S3 endpoint
-- `AWS_ACCESS_KEY_ID`: MinIO access key
-- `AWS_SECRET_ACCESS_KEY`: MinIO secret key
+### Platform Detection
 
-### Port Forwarding (Kubernetes)
+The Makefile automatically detects whether you're running on OpenShift or Kubernetes:
+
+- If `oc` CLI is available, it uses OpenShift mode and `values-openshift.yaml`
+- Otherwise, it uses Kubernetes mode with the default values file
+
+### Deployment Commands
+
+#### Initial Installation
 
 ```bash
-# LakeFS UI
-kubectl port-forward svc/lakefs 8000:80 -n fraud-detection
-# Access at http://localhost:8000
-
-# MinIO Console
-kubectl port-forward svc/minio 9090:9090 -n fraud-detection
-# Access at http://localhost:9090
+# Install the complete stack (recommended for first-time deployment)
+make install
 ```
 
-## Default Credentials
+This command will:
+1. Create the namespace if it doesn't exist
+2. Install the Helm chart with appropriate values for your platform
+3. Wait for all resources to be ready (up to 10 minutes by default)
 
-### LakeFS
-- **Username**: `admin`
-- **Access Key ID**: `something` ⚠️ Change in production!
-- **Secret Access Key**: `simple` ⚠️ Change in production!
-
-To change, edit `values.yaml`:
-```yaml
-lakefs:
-  adminCredentials:
-    accessKeyId: your-secure-key
-    secretAccessKey: your-secure-secret
-```
-
-### MinIO
-Default credentials are set in `values.yaml`. To retrieve deployed credentials:
+#### Clean Installation
 
 ```bash
-# Get username
-kubectl get secret minio -n fraud-detection \
-  -o jsonpath='{.data.user}' | base64 -d
-
-# Get password
-kubectl get secret minio -n fraud-detection \
-  -o jsonpath='{.data.password}' | base64 -d
+# Remove everything and perform a fresh installation
+make clean-install
 ```
 
-To change credentials, edit `values.yaml`:
-```yaml
-minio:
-  secret:
-    user: your-username
-    password: your-secure-password
+This is useful when you want to start fresh, removing all existing resources before reinstalling.
+
+#### Uninstall
+
+```bash
+# Remove the Helm release
+make uninstall
 ```
 
-## Configuration
+This removes the Helm release and deletes the namespace (including PersistentVolumeClaims).
 
-### Key Configuration Options
+**Warning:** This will delete all data stored in the application!
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `minio.enabled` | Enable MinIO dependency | `true` |
-| `minio.volumeClaimTemplates[0].spec.resources.requests.storage` | MinIO storage size | `10Gi` |
-| `minio.secret.user` | MinIO username | `minio_fraud_user` |
-| `minio.secret.password` | MinIO password | `minio_fraud_password` |
-| `minio.resources.requests.memory` | MinIO memory request | `1Gi` |
-| `minio.buckets.create` | Auto-create buckets | `true` |
-| `lakefs.image.tag` | LakeFS version | `1.73.0` |
-| `lakefs.adminCredentials.accessKeyId` | LakeFS admin access key | `something` |
-| `lakefs.adminCredentials.secretAccessKey` | LakeFS admin secret | `simple` |
-| `repositories.create` | Auto-create repositories | `true` |
-| `openshift.enabled` | Enable OpenShift features | `false` |
-| `openshift.routes.enabled` | Create OpenShift routes | `false` |
-| `notebook.enabled` | Enable Jupyter notebook | `false` |
-| `notebook.storage.size` | Notebook storage size | `20Gi` |
-| `notebook.resources.limits.memory` | Notebook memory limit | `8Gi` |
-| `notebook.gitSync.enabled` | Auto-clone notebooks from git | `false` |
+### Namespace Management
 
-### Customizing Notebook Configuration
+```bash
+# Create the namespace manually (usually not needed, done automatically by install)
+make create-namespace
 
-The notebook feature is designed for OpenShift AI integration. To customize:
-
-```yaml
-notebook:
-  enabled: true
-  username: "your-username"
-  
-  # Notebook image (ODH/RHODS compatible)
-  image:
-    repository: quay.io/modh/odh-minimal-notebook-image-n
-    tag: "2024.2"
-  
-  # Resource limits
-  resources:
-    limits:
-      cpu: "4"
-      memory: "16Gi"
-  
-  # Storage for notebooks and data
-  storage:
-    size: 50Gi
-    storageClassName: "gp3"
-  
-  # Automatically clone demo notebooks
-  gitSync:
-    enabled: true
-    repo: "https://github.com/rh-aiservices-bu/Fraud-Detection-data-versioning-with-lakeFS.git"
-    branch: "main"
+# Delete the namespace and ALL its resources
+make delete-namespace
 ```
 
-### Customizing Repositories
+The `delete-namespace` command will prompt for confirmation before proceeding.
 
-Edit `values.yaml`:
+### Monitoring and Status
 
-```yaml
-repositories:
-  create: true
-  repos:
-    - name: my-custom-repo
-      storageNamespace: s3://my-custom-repo/
-      defaultBranch: main
-      sampleData: false
+#### View Resources
+
+```bash
+# List all pods in the namespace
+make get-pods
+
+# List all resources (pods, services, deployments, etc.)
+make get-all
+
+# Get detailed information about all resources
+make describe
 ```
 
-### Customizing Buckets
+#### View Logs
 
-Edit `values.yaml`:
+Monitor logs from specific components:
 
-```yaml
-minio:
-  buckets:
-    create: true
-    names:
-      - my-bucket-1
-      - my-bucket-2
-      - my-bucket-3
+```bash
+# View lakeFS logs (follows log output)
+make logs-lakefs
+
+# View MinIO logs
+make logs-minio
+
+# View Jupyter notebook logs
+make logs-notebook
 ```
 
-### Using External S3
+Press `Ctrl+C` to stop following logs.
 
-To use external S3 instead of MinIO:
+### Access and URLs
 
-```yaml
-minio:
-  enabled: false
+```bash
+# Get all services and their endpoints
+make get-services
 
-lakefs:
-  config:
-    blockstore:
-      type: s3
-      s3:
-        endpoint: https://s3.amazonaws.com
-        region: us-east-1
-        forcePathStyle: false
-        # Set credentials via environment variables in deployment
+# Get OpenShift routes (OpenShift only)
+make get-routes
 ```
 
-### Resource Configuration
+## Typical Deployment Workflow
 
-OpenShift production settings in `values-openshift.yaml`:
+### First-Time Deployment
 
-```yaml
-minio:
-  resources:
-    limits:
-      cpu: "2"
-      memory: 2Gi
-    requests:
-      cpu: 200m
-      memory: 1Gi
+```bash
+# 1. Review the configuration
+make help
 
-lakefs:
-  resources:
-    limits:
-      cpu: "2"
-      memory: 2Gi
-    requests:
-      cpu: 500m
-      memory: 1Gi
+# 2. Install the application
+make install
+
+# 3. Monitor the deployment
+make get-pods
+
+# 4. Check the logs if needed
+make logs-lakefs
+
+# 5. Get access URLs
+make get-routes    # OpenShift
+make get-services  # Kubernetes
 ```
+
+### Updating the Deployment
+
+```bash
+# 1. Uninstall the current version
+make uninstall
+
+# 2. Reinstall with latest changes
+make install
+```
+
+Or use the combined command:
+
+```bash
+make clean-install
+```
+
+### Troubleshooting
+
+```bash
+# Check pod status
+make get-pods
+
+# View detailed resource information
+make describe
+
+# Check component logs
+make logs-lakefs
+make logs-minio
+make logs-notebook
+
+# Get service endpoints
+make get-services
+```
+
+### Complete Cleanup
+
+```bash
+# Remove everything including the namespace
+make clean-all
+```
+
+This will prompt for confirmation before deleting the namespace and all resources.
+
+## Components Deployed
+
+The Helm chart deploys the following components:
+
+- **lakeFS**: Data version control system
+- **MinIO**: S3-compatible object storage
+- **Jupyter Notebook**: Interactive notebooks for running the fraud detection demo
+- **RBAC**: ServiceAccounts and RoleBindings for proper permissions
+- **Post-install hooks**: Automated setup of buckets and repositories
+
+## Common Issues
+
+### Installation Timeout
+
+If the installation times out, increase the timeout value:
+
+```bash
+make install TIMEOUT=20m
+```
+
+### Permission Errors
+
+Ensure you have sufficient permissions in your cluster:
+
+```bash
+# Check your permissions
+kubectl auth can-i create deployments --namespace=fraud-detection
+```
+
+### Pod Failures
+
+Check the logs of failed pods:
+
+```bash
+# List all pods
+make get-pods
+
+# View logs for specific component
+make logs-lakefs    # or logs-minio, logs-notebook
+```
+
+## Advanced Usage
+
+### Using Custom Values Files
+
+```bash
+make install VALUES_FILE=my-custom-values.yaml
+```
+
+### Deploying to Multiple Namespaces
+
+```bash
+# Deploy to dev environment
+make install NAMESPACE=fraud-detection-dev RELEASE_NAME=fraud-dev
+
+# Deploy to production environment
+make install NAMESPACE=fraud-detection-prod RELEASE_NAME=fraud-prod
+```
+
+### Helm Command Equivalent
+
+The Makefile simplifies Helm commands. Here's what happens under the hood:
+
+```bash
+# make install is equivalent to:
+helm install fraud-detection helm/fraud-detection \
+  --namespace fraud-detection \
+  --values helm/fraud-detection/values-openshift.yaml \
+  --wait \
+  --timeout 10m
+```
+
+## Additional Resources
+
+- [Helm Chart Documentation](helm/fraud-detection/README.md)
+- [Demo Notebooks](../demo/notebooks/)
+- [Main Project README](../README.md)
 
 ## Support
 
-- [LakeFS Documentation](https://docs.lakefs.io/)
-- [MinIO Documentation](https://min.io/docs/)
-- [Helm Documentation](https://helm.sh/docs/)
-
-## Chart Dependencies
-
-This chart uses published dependencies from ai-architecture-charts:
-
-- **MinIO v0.5.2**: S3-compatible object storage with StatefulSet deployment
-
-To update dependencies:
-```bash
-# Update to latest versions in Chart.yaml
-helm dependency update
-
-# View current dependencies
-helm dependency list
-```
-
-Dependency files:
-- `Chart.yaml` - Dependency definitions
-- `Chart.lock` - Locked versions (committed to git)
-- `charts/minio-0.5.2.tgz` - Downloaded chart (not committed to git)
-
-## Contributing
-
-When making changes to this chart:
-
-1. Update dependencies if Chart.yaml changed: `helm dependency update`
-2. Test with `helm lint .`
-3. Test template rendering: `helm template test . --values values.yaml`
-4. Test on both Kubernetes and OpenShift
-5. Update this README with any configuration changes
-6. Commit `Chart.lock` but not `charts/*.tgz`
-
-## License
-
-See main project LICENSE file.
+For issues or questions, please refer to the main project repository or documentation.
 
