@@ -1,0 +1,20 @@
+{{- if and .Values.mysql.enabled .Values.mysql.config }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.mysql.name | default "mysql" }}-config
+  namespace: {{ .Values.mysql.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.mysql.name | default "mysql" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+data:
+  {{- if .Values.mysql.config.mycnf }}
+  my.cnf: |
+    {{- .Values.mysql.config.mycnf | nindent 4 }}
+  {{- end }}
+  {{- range $key, $value := .Values.mysql.config.data }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+
