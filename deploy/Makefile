@@ -1,4 +1,4 @@
-# Fraud Detection with LakeFS - Makefile
+# Fraud Detection with lakeFS - Makefile
 # This Makefile simplifies deployment and management of the fraud-detection Helm chart
 
 # Configuration Variables
@@ -19,7 +19,7 @@ endif
 
 .PHONY: help
 help: ## Display this help message
-	@echo "Fraud Detection with LakeFS - Makefile Commands"
+	@echo "Fraud Detection with lakeFS - Makefile Commands"
 	@echo "================================================"
 	@echo ""
 	@echo "Detected Platform: $(PLATFORM)"
@@ -53,17 +53,7 @@ delete-namespace: ## Delete the namespace (WARNING: This will delete all resourc
 
 ##@ Helm Chart Management
 .PHONY: clean-install
-clean-install: clean-all uninstall install ## Clean install the fraud-detection Helm chart
-	@echo "Cleaning $(RELEASE_NAME) in namespace $(NAMESPACE)..."
-	@helm uninstall $(RELEASE_NAME) --namespace $(NAMESPACE) || echo "Release $(RELEASE_NAME) not found"
-	@echo "Cleanup complete!"
-	@echo "Installing $(RELEASE_NAME) in namespace $(NAMESPACE)..."
-	@helm install $(RELEASE_NAME) $(CHART_DIR) \
-		--namespace $(NAMESPACE) \
-		--values $(CHART_DIR)/$(VALUES_FILE) \
-		--wait \
-		--timeout $(TIMEOUT);
-	@echo "Installation complete!"
+clean-install: uninstall install ## Clean install the fraud-detection Helm chart
 
 .PHONY: install
 install: create-namespace ## Install the fraud-detection Helm chart
@@ -110,7 +100,7 @@ describe: ## Describe all resources in the namespace
 ##@ Logs and Debugging
 
 .PHONY: logs-lakefs
-logs-lakefs: ## Show LakeFS logs
+logs-lakefs: ## Show lakeFS logs
 	@$(KUBECTL) logs -n $(NAMESPACE) -l app.kubernetes.io/component=lakefs --tail=100 -f
 
 .PHONY: logs-minio

@@ -94,7 +94,7 @@ minio:
   rbac:
     create: true
 
-# LakeFS configuration
+# lakeFS configuration
 lakefs:
   replicaCount: 1
 
@@ -154,7 +154,7 @@ lakefs:
         discoverBucketRegion: false
         region: ""
   
-  # LakeFS admin credentials for initial setup and API access
+  # lakeFS admin credentials for initial setup and API access
   adminCredentials:
     username: admin
     accessKeyId: something
@@ -208,7 +208,7 @@ notebook:
     enabled: true
     size: 2Gi
   
-  # LakeFS connection information
+  # lakeFS connection information
   lakefs:
     url: "http://lakefs"
   
@@ -220,7 +220,7 @@ notebook:
   # OpenShift AI specific settings
   openshiftAI:
     dataConnections:
-      enabled: true  # Create OpenShift AI data connections for MinIO and LakeFS
+      enabled: true  # Create OpenShift AI data connections for MinIO and lakeFS
   
   # Git sync to automatically clone notebooks
   gitSync:

@@ -110,58 +110,112 @@ The user performing this quickstart should have the ability to create a project 
 
 ## Deploy
 
-The process is very simple. Just follow the steps below.
+The deployment uses Helm charts managed through a convenient Makefile interface.
 
 ### Pre-requisites
 
 The steps assume the following pre-requisite products and components are deployed and functional with required permissions on the cluster:
 
-1. Red Hat OpenShift Container Platform
+1. Red Hat OpenShift Container Platform (or Kubernetes cluster)
 2. Red Hat OpenShift Service Mesh
 3. Red Hat OpenShift Serverless
 4. Red Hat OpenShift AI
 5. User has `admin` permissions in the cluster
+6. Helm 3.x installed
+7. `oc` (OpenShift) or `kubectl` (Kubernetes) CLI installed
 
 ### Deployment Steps
 
 1. Clone this repo
-```
-$ git clone https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git
+```bash
+git clone https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git
 ```
 
 2. cd to `deploy` directory
-```
-$ cd Fraud-Detection-data-versioning-with-lakeFS/deploy
+```bash
+cd Fraud-Detection-data-versioning-with-lakeFS/deploy
 ```
 
 3. Login to the OpenShift cluster:
-```
-$ oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
+```bash
+oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
 ```
 
-4. Make sure `deploy.sh` is executable and run it, passing it the name of the project in which to install. It can be an existing or new project. In this example, it will deploy to the `lakefs` project.
-```
-# Make script executable
-$ chmod + deploy.sh
+4. Deploy using the Makefile (recommended):
+```bash
+# View all available commands and configuration
+make help
 
-# Run script passing it the project in which to install
-$ ./deploy.sh lakefs
+# Deploy everything (creates namespace and installs all components)
+make install
+
+# Check deployment status
+make get-pods
 ```
+
+The Makefile will automatically:
+- Detect if you're on OpenShift or Kubernetes
+- Create the namespace (`fraud-detection` by default)
+- Deploy lakeFS, MinIO, and Jupyter notebooks
+- Set up required RBAC and post-install configurations
+
+**Customize deployment** (optional):
+```bash
+# Deploy to a custom namespace
+make install NAMESPACE=my-lakefs-demo
+
+# Use a longer timeout for slower clusters
+make install TIMEOUT=15m
+```
+
+For detailed Makefile documentation, see [deploy/Readme.md](deploy/Readme.md).
 
 ### Access lakeFS UI
 
-Use the route to access the lakeFS browser-base UI. 
+1. Get the lakeFS route or service URL:
+```bash
+# For OpenShift
+make get-routes
 
-1. Leave the username set to `admin`
-2. Enter your email address (or a bogus email address)
-3. Download the `access_key_id` and `secret_access_key` displayed on the new page, as they will not be accessible later on
-4. Go back to the login page and log in using those credentials.
+# For Kubernetes
+make get-services
+```
+
+2. Access the lakeFS browser-based UI using the route/URL:
+   - Leave the username set to `admin`
+   - Enter your email address (or a bogus email address)
+   - Download the `access_key_id` and `secret_access_key` displayed on the new page, as they will not be accessible later on
+   - Go back to the login page and log in using those credentials
+
+### Monitor Deployment
+
+```bash
+# View all resources
+make get-all
+
+# Check specific component logs
+make logs-lakefs
+make logs-minio
+make logs-notebook
+```
 
 ### Delete
 
-The project the apps were installed in can be deleted, which will delete all of the resources in it, including deployments, secrets, pods, configmaps, etc.
+Remove the deployment using the Makefile:
+
+```bash
+# Uninstall the Helm release and delete the namespace
+make uninstall
+
+# Or delete everything including namespace
+make clean-all
 ```
-oc delete project lakefs
+
+Alternatively, you can manually delete the project/namespace:
+```bash
+oc delete namespace fraud-detection
+# or
+kubectl delete namespace fraud-detection
 ```
 
 ## References 

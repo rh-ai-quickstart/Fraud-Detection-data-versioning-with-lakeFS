@@ -49,14 +49,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-LakeFS fullname
+lakeFS fullname
 */}}
 {{- define "lakefs.fullname" -}}
 lakefs
 {{- end }}
 
 {{/*
-LakeFS labels
+lakeFS labels
 */}}
 {{- define "lakefs.labels" -}}
 helm.sh/chart: {{ include "fraud-detection.chart" . }}
@@ -69,7 +69,7 @@ app.kubernetes.io/part-of: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-LakeFS selector labels
+lakeFS selector labels
 */}}
 {{- define "lakefs.selectorLabels" -}}
 app: lakefs
