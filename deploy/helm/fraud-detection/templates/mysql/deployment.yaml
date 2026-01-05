@@ -1,0 +1,97 @@
+{{- if .Values.mysql.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.mysql.name | default "mysql" }}
+  namespace: {{ .Values.mysql.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.mysql.name | default "mysql" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Values.mysql.name | default "mysql" }}
+      deployment: {{ .Values.mysql.name | default "mysql" }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mysql.name | default "mysql" }}
+        deployment: {{ .Values.mysql.name | default "mysql" }}
+    spec:
+      containers:
+        - name: mysql
+          {{- if .Values.openshift.enabled }}
+          image: {{ .Values.mysql.imageName | default "mysql" }}:{{ .Values.mysql.imageTag | default "latest" }}
+          {{- else }}
+          image: {{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.mysql.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 3306
+              name: mysql
+              protocol: TCP
+          env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.name | default "mysql" }}
+                  key: database-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.name | default "mysql" }}
+                  key: database-password
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.name | default "mysql" }}
+                  key: database-root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mysql.name | default "mysql" }}
+                  key: database-name
+          {{- if .Values.mysql.persistence.enabled }}
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+              subPath: data
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -i
+                - -c
+                - MYSQL_PWD="$MYSQL_PASSWORD" mysqladmin -u $MYSQL_USER ping
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -i
+                - -c
+                - MYSQL_PWD="$MYSQL_PASSWORD" mysqladmin -u $MYSQL_USER ping
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.mysql.resources | nindent 12 }}
+      {{- if .Values.mysql.persistence.enabled }}
+      volumes:
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.mysql.name | default "mysql" }}
+      {{- end }}
+{{- end }}
+

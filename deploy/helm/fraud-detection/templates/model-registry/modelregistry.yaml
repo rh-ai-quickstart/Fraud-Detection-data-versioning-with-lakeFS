@@ -1,0 +1,38 @@
+{{- if and .Values.mysql.enabled .Values.modelRegistry.enabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.modelRegistry.name | default "model-registry" }}-db-secret
+  namespace: {{ .Values.modelRegistry.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.modelRegistry.name | default "model-registry" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  # MySQL connection parameters
+  database-host: {{ include "mysql.host" . | quote }}
+  database-port: {{ .Values.mysql.port | default 3306 | quote }}
+  database-name: {{ .Values.mysql.database | quote }}
+  database-user: {{ .Values.mysql.user | quote }}
+  database-password: {{ .Values.mysql.password | quote }}
+  # Full connection string
+  database-connection-string: {{ include "mysql.connectionString" . | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.modelRegistry.name | default "model-registry" }}-config
+  namespace: {{ .Values.modelRegistry.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.modelRegistry.name | default "model-registry" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+data:
+  # Model Registry Configuration
+  registry-name: {{ .Values.modelRegistry.name | default "model-registry" | quote }}
+  database-type: "mysql"
+  mysql-host: {{ include "mysql.host" . | quote }}
+  mysql-port: {{ .Values.mysql.port | default 3306 | quote }}
+  mysql-database: {{ .Values.mysql.database | quote }}
+{{- end }}
+
