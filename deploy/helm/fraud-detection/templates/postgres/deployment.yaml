@@ -1,0 +1,95 @@
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.postgres.name | default "postgres" }}
+  namespace: {{ .Values.postgres.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.postgres.name | default "postgres" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Values.postgres.name | default "postgres" }}
+      deployment: {{ .Values.postgres.name | default "postgres" }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.postgres.name | default "postgres" }}
+        deployment: {{ .Values.postgres.name | default "postgres" }}
+    spec:
+      containers:
+        - name: postgres
+          {{- if .Values.openshift.enabled }}
+          image: {{ .Values.postgres.imageName | default "postgres" }}:{{ .Values.postgres.imageTag | default "latest" }}
+          {{- else }}
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.name | default "postgres" }}
+                  key: database-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.name | default "postgres" }}
+                  key: database-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.name | default "postgres" }}
+                  key: database-name
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          {{- if .Values.postgres.persistence.enabled }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: initdb-volume
+              mountPath: /docker-entrypoint-initdb.d
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      {{- if .Values.postgres.persistence.enabled }}
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.postgres.name | default "postgres" }}
+        - name: initdb-volume
+          configMap:
+            name: {{ .Values.postgres.name | default "postgres" }}-initdb
+      {{- end }}
+{{- end }}

@@ -105,23 +105,23 @@ minio
 {{- end }}
 
 {{/*
-MySQL fullname
+PostgreSQL fullname
 */}}
-{{- define "mysql.fullname" -}}
-{{- .Values.mysql.name | default "mysql" }}
+{{- define "postgres.fullname" -}}
+{{- .Values.postgres.name | default "postgres" }}
 {{- end }}
 
 {{/*
-MySQL connection string
+PostgreSQL connection string (DSN format)
 */}}
-{{- define "mysql.connectionString" -}}
-{{- printf "mysql://%s:%s@%s:%d/%s" .Values.mysql.user .Values.mysql.password (include "mysql.fullname" .) (.Values.mysql.port | default 3306 | int) .Values.mysql.database }}
+{{- define "postgres.connectionString" -}}
+{{- printf "postgresql://%s:%s@%s:%d/%s" .Values.postgres.user .Values.postgres.password (include "postgres.fullname" .) (.Values.postgres.port | default 5432 | int) .Values.postgres.database }}
 {{- end }}
 
 {{/*
-MySQL host with namespace
+PostgreSQL host with namespace
 */}}
-{{- define "mysql.host" -}}
-{{- printf "%s.%s.svc.cluster.local" (include "mysql.fullname" .) (.Values.mysql.namespace | default .Release.Namespace) }}
+{{- define "postgres.host" -}}
+{{- printf "%s.%s.svc.cluster.local" (include "postgres.fullname" .) (.Values.postgres.namespace | default .Release.Namespace) }}
 {{- end }}
 

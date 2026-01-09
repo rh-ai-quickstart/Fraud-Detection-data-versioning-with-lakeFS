@@ -1,0 +1,18 @@
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.postgres.name | default "postgres" }}-initdb
+  namespace: {{ .Values.postgres.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.postgres.name | default "postgres" }}
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    # The database is automatically created by POSTGRES_DB env var
+    # This script can be used for additional initialization if needed
+    echo "PostgreSQL initialization complete for database: ${POSTGRES_DB}"
+{{- end }}
