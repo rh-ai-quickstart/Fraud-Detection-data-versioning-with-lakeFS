@@ -1,6 +1,6 @@
-{{- if and .Values.mysql.enabled .Values.modelRegistry.enabled .Values.modelRegistry.createService }}
+{{- if and .Values.postgres.enabled .Values.modelRegistry.enabled .Values.modelRegistry.createService }}
 ---
-apiVersion: modelregistry.opendatahub.io/v1alpha1
+apiVersion: modelregistry.opendatahub.io/v1beta1
 kind: ModelRegistry
 metadata:
   name: {{ .Values.modelRegistry.name | default "model-registry" }}
@@ -14,27 +14,15 @@ spec:
   rest:
     port: {{ .Values.modelRegistry.restPort | default 8080 }}
     serviceRoute: enabled
-  mysql:
-    host: {{ include "mysql.host" . }}
-    port: {{ .Values.mysql.port | default 3306 }}
-    database: {{ .Values.mysql.database }}
-    username: {{ .Values.mysql.user }}
+  postgres:
+    host: {{ include "postgres.host" . }}
+    port: {{ .Values.postgres.port | default 5432 }}
+    database: {{ .Values.postgres.database }}
+    username: {{ .Values.postgres.user }}
     passwordSecret:
-      name: {{ .Values.mysql.name | default "mysql" }}
+      name: {{ .Values.modelRegistry.name | default "model-registry" }}-db-secret
       key: database-password
-  {{- if .Values.modelRegistry.istio }}
-  istio:
-    audiences:
-      {{- toYaml .Values.modelRegistry.istio.audiences | nindent 6 }}
-    authProvider: {{ .Values.modelRegistry.istio.authProvider | default "https://kubernetes.default.svc" }}
-    {{- if .Values.modelRegistry.istio.gateway }}
-    gateway:
-      domain: {{ .Values.modelRegistry.istio.gateway.domain }}
-      grpc:
-        gatewayRoute: {{ .Values.modelRegistry.istio.gateway.grpc.gatewayRoute | default "enabled" }}
-      rest:
-        gatewayRoute: {{ .Values.modelRegistry.istio.gateway.rest.gatewayRoute | default "enabled" }}
+    {{- if .Values.postgres.sslMode }}
+    sslMode: {{ .Values.postgres.sslMode }}
     {{- end }}
-  {{- end }}
 {{- end }}
-
