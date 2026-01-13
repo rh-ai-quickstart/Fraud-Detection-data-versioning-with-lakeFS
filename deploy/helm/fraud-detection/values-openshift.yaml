@@ -100,8 +100,8 @@ lakefs:
 
   secret:
     name: ""  # Defaults to minio fullname
-    secret_key: minio_user
-    secret_access_key: minio_password
+    secret_key:  something
+    secret_access_key: simple
     endpoint: http://lakefs
 
     repo_name: my-storage
