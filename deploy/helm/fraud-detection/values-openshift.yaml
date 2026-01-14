@@ -64,7 +64,7 @@ minio:
     name: pipeline-artifacts
     secret_key: something
     secret_access_key: simple
-    endpoint: https://minio-api-lakefs.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+    endpoint: https://lakefs-fraud-detection.apps.ai-dev02.kni.syseng.devcluster.openshift.com
     defaultBucket: pipeline-artifacts
     # Override for subchart
     user: minio_user
