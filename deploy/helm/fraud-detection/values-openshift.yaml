@@ -64,8 +64,8 @@ minio:
     name: pipeline-artifacts
     secret_key: something
     secret_access_key: simple
-    endpoint: https://minio-api-lakefs.apps.3c47b24f-lakefsai.openshiftpartnerlabs.com
-    defaultBucket: pipeline-artifacts
+    endpoint: https://lakefs-fraud-detection.apps.ai-dev02.kni.syseng.devcluster.openshift.com
+    defaultBucket: my-storage
     # Override for subchart
     user: minio_user
     password: minio_password
@@ -100,8 +100,8 @@ lakefs:
 
   secret:
     name: ""  # Defaults to minio fullname
-    secret_key: minio_user
-    secret_access_key: minio_password
+    secret_key:  something
+    secret_access_key: simple
     endpoint: http://lakefs
 
     repo_name: my-storage
@@ -226,35 +226,37 @@ notebook:
   gitSync:
     enabled: true  # Automatically clone notebooks from repository
     repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
-    branch: "rj_notebooks"
+    branch: "main"
     image: "alpine/git:latest"
 
-# MySQL configuration for Model Registry
-mysql:
+# PostgreSQL configuration for Model Registry
+postgres:
   enabled: true
-  name: mysql
+  name: postgres
   # Note: This is the namespace for the model registry. It is not the same as the namespace for the fraud detection project.
-  # namespace: rhoai-model-registries  # Target namespace for MySQL deployment
+  # namespace: rhoai-model-registries  # Target namespace for PostgreSQL deployment
   namespace: fraud-detection
   
   # Image configuration
   image:
-    repository: quay.io/sclorg/mysql-80-c9s
-    tag: latest
+    repository: docker.io/postgres
+    tag: "16-alpine"
     pullPolicy: IfNotPresent
   
   # ImageStream configuration (OpenShift only)
-  imageName: mysql
-  imageTag: latest
+  imageName: postgres
+  imageTag: "16-alpine"
   
   # Database credentials
-  user: mysql_user
-  password: mysql_password
-  rootPassword: mysql_root_password
+  user: postgres_user
+  password: postgres_password
   database: model_registry
   
   # Service configuration
-  port: 3306
+  port: 5432
+  
+  # Optional SSL mode for connections (disable, allow, prefer, require, verify-ca, verify-full)
+  # sslMode: prefer
   
   # Persistence configuration
   persistence:
@@ -271,15 +273,6 @@ mysql:
     requests:
       cpu: 100m
       memory: 256Mi
-  
-  # Optional: Custom MySQL configuration
-  # config:
-  #   mycnf: |
-  #     [mysqld]
-  #     max_connections=100
-  #     innodb_buffer_pool_size=256M
-  #   data:
-  #     custom-key: custom-value
 
 # Model Registry configuration
 modelRegistry:
@@ -292,15 +285,3 @@ modelRegistry:
   # Service ports
   grpcPort: 9090
   restPort: 8080
-  
-  # Istio configuration (optional, for OpenShift Service Mesh integration)
-  istio:
-    audiences:
-      - https://kubernetes.default.svc
-    authProvider: "https://kubernetes.default.svc"
-    gateway:
-      domain: ""  # Set to your OpenShift apps domain for external access
-      grpc:
-        gatewayRoute: enabled
-      rest:
-        gatewayRoute: enabled

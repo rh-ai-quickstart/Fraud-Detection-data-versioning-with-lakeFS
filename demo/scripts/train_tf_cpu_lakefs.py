@@ -227,7 +227,7 @@ config = {"lr": learning_rate, "batch_size": batch_size, "epochs": num_epochs, "
 
 train_dataset = ray.data.read_csv(
     filesystem=pyarrow_fs,
-    paths=f"s3://{bucket_name}/{train_data}")
+    paths=f"lakefs://{bucket_name}/{train_data}")
 scaler = StandardScaler(columns=feature_columns)
 concatenator = Concatenator(include=feature_columns, output_column_name=output_column_name)
 train_dataset = scaler.fit_transform(train_dataset)

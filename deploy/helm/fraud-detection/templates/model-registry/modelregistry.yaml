@@ -1,4 +1,4 @@
-{{- if and .Values.mysql.enabled .Values.modelRegistry.enabled }}
+{{- if and .Values.postgres.enabled .Values.modelRegistry.enabled }}
 ---
 apiVersion: v1
 kind: Secret
@@ -10,14 +10,14 @@ metadata:
     {{- include "fraud-detection.labels" . | nindent 4 }}
 type: Opaque
 stringData:
-  # MySQL connection parameters
-  database-host: {{ include "mysql.host" . | quote }}
-  database-port: {{ .Values.mysql.port | default 3306 | quote }}
-  database-name: {{ .Values.mysql.database | quote }}
-  database-user: {{ .Values.mysql.user | quote }}
-  database-password: {{ .Values.mysql.password | quote }}
+  # PostgreSQL connection parameters
+  database-host: {{ include "postgres.host" . | quote }}
+  database-port: {{ .Values.postgres.port | default 5432 | quote }}
+  database-name: {{ .Values.postgres.database | quote }}
+  database-user: {{ .Values.postgres.user | quote }}
+  database-password: {{ .Values.postgres.password | quote }}
   # Full connection string
-  database-connection-string: {{ include "mysql.connectionString" . | quote }}
+  database-connection-string: {{ include "postgres.connectionString" . | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -30,9 +30,8 @@ metadata:
 data:
   # Model Registry Configuration
   registry-name: {{ .Values.modelRegistry.name | default "model-registry" | quote }}
-  database-type: "mysql"
-  mysql-host: {{ include "mysql.host" . | quote }}
-  mysql-port: {{ .Values.mysql.port | default 3306 | quote }}
-  mysql-database: {{ .Values.mysql.database | quote }}
+  database-type: "postgres"
+  postgres-host: {{ include "postgres.host" . | quote }}
+  postgres-port: {{ .Values.postgres.port | default 5432 | quote }}
+  postgres-database: {{ .Values.postgres.database | quote }}
 {{- end }}
-
