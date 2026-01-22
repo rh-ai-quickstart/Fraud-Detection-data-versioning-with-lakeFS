@@ -1,0 +1,36 @@
+{{- if .Values.dataSciencePipelines.enabled }}
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: {{ .Values.dataSciencePipelines.name | default "dspa" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipelines
+spec:
+  apiServer:
+    deploy: true
+    enableSamplePipeline: {{ .Values.dataSciencePipelines.enableSamplePipeline | default false }}
+  database:
+    mariaDB:
+      deploy: true
+      pipelineDBName: {{ .Values.dataSciencePipelines.database.name | default "mlpipeline" }}
+      {{- if .Values.dataSciencePipelines.database.resources }}
+      resources:
+        {{- toYaml .Values.dataSciencePipelines.database.resources | nindent 8 }}
+      {{- end }}
+  objectStorage:
+    externalStorage:
+      bucket: {{ .Values.dataSciencePipelines.objectStorage.bucket | default "pipeline-artifacts" }}
+      host: {{ .Values.dataSciencePipelines.objectStorage.host | default "minio" }}
+      port: {{ .Values.dataSciencePipelines.objectStorage.port | default "" | quote }}
+      s3CredentialsSecret:
+        accessKey: {{ .Values.dataSciencePipelines.objectStorage.s3CredentialsSecret.accessKey | default "AWS_ACCESS_KEY_ID" }}
+        secretKey: {{ .Values.dataSciencePipelines.objectStorage.s3CredentialsSecret.secretKey | default "AWS_SECRET_ACCESS_KEY" }}
+        secretName: {{ .Values.dataSciencePipelines.objectStorage.s3CredentialsSecret.secretName | default "pipeline-artifacts" }}
+      scheme: {{ .Values.dataSciencePipelines.objectStorage.scheme | default "http" }}
+  persistenceAgent:
+    deploy: true
+  scheduledWorkflow:
+    deploy: true
+{{- end }}

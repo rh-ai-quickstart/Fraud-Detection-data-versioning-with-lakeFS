@@ -215,6 +215,7 @@ The Helm chart deploys the following components:
 - **Jupyter Notebook**: Interactive notebooks for running the fraud detection demo
 - **RBAC**: ServiceAccounts and RoleBindings for proper permissions
 - **Post-install hooks**: Automated setup of buckets and repositories
+- **Model Registry**: Data Science Model Registry
 
 ## Common Issues
 
