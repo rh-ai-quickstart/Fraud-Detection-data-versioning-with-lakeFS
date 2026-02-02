@@ -274,12 +274,36 @@ postgres:
       cpu: 100m
       memory: 256Mi
 
+
+# Data Science Pipelines Application configuration
+dataSciencePipelines:
+  enabled: true
+  name: dspa
+  enableSamplePipeline: false
+  database:
+    name: mlpipeline
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+  objectStorage:
+    bucket: pipeline-artifacts
+    host: minio.fraud-detection.svc.cluster.local
+    port: "9000"
+    scheme: http
+    s3CredentialsSecret:
+      secretName: pipeline-artifacts
+      accessKey: AWS_ACCESS_KEY_ID
+      secretKey: AWS_SECRET_ACCESS_KEY
+
 # Model Registry configuration
 modelRegistry:
-  enabled: true  # Set to true to create Model Registry connection resources
-  createService: true  # Set to true to deploy the actual ModelRegistry CR (requires model-registry-operator)
+  enabled: true
+  createService: true
   name: lakefs-model-registry
-  # namespace: rhoai-model-registries  # Should match mysql.namespace or adjust accordingly
   namespace: rhoai-model-registries
   
   # Service ports
