@@ -20,6 +20,7 @@ This AI quickstart demonstrates how to use **lakeFS as an AI data control plane*
   - [Deployment steps](#deployment-steps)
   - [Access lakeFS UI](#access-lakefs-ui)
   - [Delete](#delete)
+- [Documentation](#documentation)
 - [References](#references)
 - [Technical details](#technical-details)
 - [Tags](#tags)
@@ -218,12 +219,22 @@ oc delete namespace fraud-detection
 kubectl delete namespace fraud-detection
 ```
 
-## References 
+## Documentation
+
+For detailed guides on specific topics, see:
+
+| Guide | Description |
+|-------|-------------|
+| [Pipelines Guide](docs/PIPELINES.md) | Comprehensive guide to Data Science Pipelines setup and usage |
+| [Notebooks Guide](docs/NOTEBOOKS.md) | Detailed documentation for all Jupyter notebooks |
+| [Pipelines Quick Reference](demo/pipelines/PipelinesReadMe.md) | Quick reference for pipeline files |
+
+## References x
 
 * lakeFS documentation [v1.73](https://docs.lakefs.io/v1.73/)
 * OpenShift AI documentation [v2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
 * OpenShift AI Fraud Detection [example](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/openshift_ai_tutorial_-_fraud_detection_example)
-* Demo Using Pipelines in OpenShift AI [demo](/demo/pipelines/PipelinesReadMe.md)
+xx* OpenShift AI Pipelines [documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/working_with_data_science_pipelines)
 
 ## Technical details
 
