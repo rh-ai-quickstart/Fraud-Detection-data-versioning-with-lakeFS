@@ -77,7 +77,7 @@ The fraud detection model is a fully connected deep neural network:
 
 Before running pipelines in OpenShift AI, ensure you have:
 
-1. **Pipeline Server Deployed**: The Data Science Pipeline Server must be running in your project. This is automatically deployed by the Helm chart if `dataSciencePipelines.enabled: true` is set.
+1. **Pipeline Server Deployed**: The Data Science Pipeline Server must be running in your project. This is automatically deployed by the Helm chart if `dataSciencePipelines.enabled: true` is set. With `dataSciencePipelines.uploadPipeline: true` (default in `values-openshift.yaml`), the chart also uploads Pipeline 7 automatically after install so it appears in the dashboard without a manual import.
 
 2. **Data Connections Configured**: The following secrets must exist in your namespace:
    - `my-storage` - lakeFS connection credentials
@@ -104,7 +104,11 @@ Before running pipelines in OpenShift AI, ensure you have:
 
 ### Running Pipeline 7 (KFP Pipeline)
 
-#### Option A: Import via OpenShift AI Dashboard
+#### Option A: Use Auto-Uploaded Pipeline (Helm default)
+
+If you deployed with the Helm chart and `dataSciencePipelines.uploadPipeline: true` (default in `values-openshift.yaml`), Pipeline 7 is uploaded automatically after install. Go to **OpenShift AI Dashboard** → **Data Science Pipelines** → **Pipelines**, find **7-get-data-train-upload-lakefs**, then **Create Run** and configure parameters.
+
+#### Option B: Import via OpenShift AI Dashboard
 
 1. Navigate to **OpenShift AI Dashboard** → **Data Science Pipelines** → **Pipelines**
 2. Click **Import Pipeline**
@@ -112,7 +116,7 @@ Before running pipelines in OpenShift AI, ensure you have:
 4. Once imported, click on the pipeline and select **Create Run**
 5. Configure any parameters and click **Create**
 
-#### Option B: Upload via Pipeline Server API
+#### Option C: Upload via Pipeline Server API
 
 ```bash
 # Get the pipeline server route
@@ -121,7 +125,7 @@ oc get routes -n fraud-detection | grep ds-pipeline
 # Use the route to upload the pipeline via the KFP SDK or API
 ```
 
-#### Option C: Regenerate and Upload
+#### Option D: Regenerate and Upload
 
 If you need to modify the pipeline, edit the Python source and recompile:
 
