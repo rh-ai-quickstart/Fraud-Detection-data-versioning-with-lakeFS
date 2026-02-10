@@ -1,0 +1,108 @@
+{{- if and .Values.dataSciencePipelines.enabled .Values.dataSciencePipelines.uploadPipeline }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-upload-pipeline
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipelines
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: pipelines
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      initContainers:
+        - name: wait-for-pipeline-api
+          image: curlimages/curl:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |-
+              echo "Waiting for Data Science Pipelines API..."
+              PIPELINE_HOST="ds-pipeline-{{ .Values.dataSciencePipelines.name | default "dspa" }}.{{ .Release.Namespace }}.svc.cluster.local"
+              URL="https://${PIPELINE_HOST}:8443"
+              MAX_ATTEMPTS=60
+              for i in $(seq 1 $MAX_ATTEMPTS); do
+                CODE=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 5 "$URL/" 2>/dev/null || true)
+                if [ -n "$CODE" ] && [ "$CODE" != "000" ]; then
+                  echo " Pipeline API ready (HTTP $CODE)."
+                  exit 0
+                fi
+                echo -n "."
+                sleep 10
+              done
+              echo " Timeout waiting for Pipeline API at $URL"
+              exit 1
+      containers:
+        - name: upload-pipeline
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+          args:
+            - -ec
+            - |-
+              set -e
+              echo "Installing kfp..."
+              pip install --quiet --no-cache-dir "kfp>=2.4.0,<3"
+              echo "Downloading pipeline..."
+              python3 -c "import os, urllib.request; urllib.request.urlretrieve(os.environ['PIPELINE_URL'], '/tmp/pipeline.yaml')"
+              echo "Uploading pipeline '$PIPELINE_NAME' to $API_URL..."
+              python3 << 'PYEOF'
+              import os
+              from kfp import client
+              api_url = os.environ["API_URL"]
+              pipeline_name = os.environ["PIPELINE_NAME"]
+              namespace = os.environ.get("PIPELINE_NAMESPACE", "")
+              token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+              token = None
+              if os.path.isfile(token_path):
+                with open(token_path) as f:
+                  token = f.read().strip()
+              c = client.Client(host=api_url, verify_ssl=False, existing_token=token)
+              if namespace:
+                c.set_user_namespace(namespace)
+              try:
+                p = c.upload_pipeline(pipeline_package_path="/tmp/pipeline.yaml", pipeline_name=pipeline_name)
+                print("Uploaded pipeline:", getattr(p, "display_name", None) or getattr(p, "pipeline_id", "ok"))
+              except Exception as e:
+                if "already exists" in str(e).lower() or "409" in str(e):
+                  print("Pipeline already exists; skipping upload.")
+                else:
+                  raise
+              PYEOF
+              echo "Done."
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PIPELINE_URL
+              value: {{ .Values.dataSciencePipelines.uploadPipelineUrl | default "https://raw.githubusercontent.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS/main/demo/pipelines/7_get_data_train_upload_lakefs.yaml" | quote }}
+            - name: PIPELINE_NAME
+              value: {{ .Values.dataSciencePipelines.uploadPipelineName | default "7-get-data-train-upload-lakefs" | quote }}
+            - name: API_URL
+              value: "https://ds-pipeline-{{ .Values.dataSciencePipelines.name | default "dspa" }}.{{ .Release.Namespace }}.svc.cluster.local:8443"
+            - name: PIPELINE_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+          volumeMounts:
+            - name: sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+      volumes:
+        - name: sa-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+{{- end }}

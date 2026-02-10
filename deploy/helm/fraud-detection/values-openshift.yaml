@@ -280,6 +280,10 @@ dataSciencePipelines:
   enabled: true
   name: dspa
   enableSamplePipeline: false
+  # Upload the fraud-detection lakeFS pipeline after the DSPA is ready (post-install hook)
+  uploadPipeline: true
+  uploadPipelineUrl: "https://raw.githubusercontent.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS/main/demo/pipelines/7_get_data_train_upload_lakefs.yaml"
+  uploadPipelineName: "7-get-data-train-upload-lakefs"
   database:
     name: mlpipeline
     resources:
