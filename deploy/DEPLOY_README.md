@@ -1,13 +1,21 @@
 # Fraud Detection with lakeFS - Deployment Guide
 
-This directory contains the Helm chart and Makefile for deploying the Fraud Detection with lakeFS demo application.
+This directory contains the Helm charts and Makefile for deploying the Fraud Detection with lakeFS demo application.
+
+The deployment uses **two Helm charts**:
+
+| Chart | Directory | Namespace | Requires | Deploys |
+|-------|-----------|-----------|----------|---------|
+| `fraud-detection-admin` | `helm/fraud-detection-admin` | `rhoai-model-registries` | **cluster-admin** | PostgreSQL, Model Registry, DSC patch, RBAC |
+| `fraud-detection` | `helm/fraud-detection` | `fraud-detection` | namespace **admin** | lakeFS, MinIO, Jupyter notebook, Data Science Pipeline Server |
 
 ## Prerequisites
 
-- Kubernetes cluster or OpenShift cluster
-- `kubectl` or `oc` CLI installed
+- OpenShift cluster (or Kubernetes cluster for the user chart only)
+- `oc` (OpenShift) or `kubectl` (Kubernetes) CLI installed
 - Helm 3.x installed
 - Sufficient cluster resources (CPU, memory, storage)
+- **cluster-admin** for the admin chart; namespace **admin** for the user chart
 
 ## Quick Start
 
@@ -17,11 +25,17 @@ The simplest way to deploy is using the Makefile:
 # Display all available commands
 make help
 
-# Deploy everything (creates namespace and installs Helm chart)
-make install
+# Deploy both charts (requires cluster-admin)
+make install-all
 
 # Check the status
 make get-pods
+```
+
+If you only need the core lakeFS demo (no Model Registry), you can skip the admin chart:
+
+```bash
+make install
 ```
 
 ## Makefile Commands
@@ -32,45 +46,79 @@ The Makefile provides a convenient interface for managing the deployment. Run `m
 
 The Makefile supports the following environment variables for customization:
 
+**User chart variables:**
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NAMESPACE` | `fraud-detection` | Kubernetes/OpenShift namespace |
-| `RELEASE_NAME` | `fraud-detection` | Helm release name |
-| `CHART_DIR` | `helm/fraud-detection` | Path to Helm chart directory |
-| `VALUES_FILE` | `values-openshift.yaml` | Values file to use |
+| `NAMESPACE` | `fraud-detection` | Namespace for the user chart |
+| `RELEASE_NAME` | `fraud-detection` | Helm release name for the user chart |
+| `CHART_DIR` | `helm/fraud-detection` | Path to user Helm chart directory |
+| `VALUES_FILE` | `values-openshift.yaml` | Values file (used on Kubernetes only; OpenShift auto-selects) |
 | `TIMEOUT` | `10m` | Helm installation timeout |
+
+**Admin chart variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADMIN_NAMESPACE` | `rhoai-model-registries` | Namespace for the admin chart |
+| `ADMIN_RELEASE_NAME` | `fraud-detection-admin` | Helm release name for the admin chart |
+| `ADMIN_CHART_DIR` | `helm/fraud-detection-admin` | Path to admin Helm chart directory |
 
 **Example:** Override defaults:
 
 ```bash
 make install NAMESPACE=my-namespace TIMEOUT=15m
+make install-admin ADMIN_NAMESPACE=my-model-registries
 ```
 
 ### Platform Detection
 
 The Makefile automatically detects whether you're running on OpenShift or Kubernetes:
 
-- If `oc` CLI is available, it uses OpenShift mode and `values-openshift.yaml`
-- Otherwise, it uses Kubernetes mode with the default values file
+- If `oc` CLI is available, it uses OpenShift mode and applies both `values-openshift.yaml` and `values-openshift-no-registry.yaml` (disabling Model Registry in the user chart since it is managed by the admin chart)
+- Otherwise, it uses Kubernetes mode with the `VALUES_FILE` value
 
 ### Deployment Commands
 
-#### Initial Installation
+#### Full Installation (both charts)
 
 ```bash
-# Install the complete stack (recommended for first-time deployment)
+# Install admin chart first, then user chart (requires cluster-admin)
+make install-all
+```
+
+This runs `install-admin` followed by `install` (the order is flexible).
+
+#### Admin Chart Only
+
+```bash
+# Deploy PostgreSQL + Model Registry + DSC patch + RBAC (requires cluster-admin)
+make install-admin
+```
+
+This command will:
+1. Create the `rhoai-model-registries` namespace if it doesn't exist
+2. Deploy PostgreSQL and Model Registry
+3. Patch the DataScienceCluster to enable Model Registry
+4. Set up RBAC so configured users and projects can access the registry
+
+#### User Chart Only
+
+```bash
+# Deploy lakeFS, MinIO, notebooks, pipelines (namespace admin)
 make install
 ```
 
 This command will:
-1. Create the namespace if it doesn't exist
+1. Create the namespace as an OpenShift project (or Kubernetes namespace)
 2. Install the Helm chart with appropriate values for your platform
-3. Wait for all resources to be ready (up to 10 minutes by default)
+3. Run post-install hooks to create MinIO buckets, lakeFS repositories, and upload the pipeline
+4. Wait for all resources to be ready (up to 10 minutes by default)
 
 #### Clean Installation
 
 ```bash
-# Remove everything and perform a fresh installation
+# Remove the user chart and perform a fresh installation
 make clean-install
 ```
 
@@ -79,13 +127,17 @@ This is useful when you want to start fresh, removing all existing resources bef
 #### Uninstall
 
 ```bash
-# Remove the Helm release
+# Remove the user chart and delete its namespace
 make uninstall
+
+# Remove the admin chart
+make uninstall-admin
+
+# Remove both charts
+make uninstall-all
 ```
 
-This removes the Helm release and deletes the namespace (including PersistentVolumeClaims).
-
-**Warning:** This will delete all data stored in the application!
+**Warning:** `make uninstall` will delete the namespace and all data (including PersistentVolumeClaims).
 
 ### Namespace Management
 
@@ -127,12 +179,19 @@ make logs-minio
 
 # View Jupyter notebook logs
 make logs-notebook
+```
 
-# View PostgreSQL logs
-make logs-postgres
+For components not covered by Makefile targets, use `oc` directly:
+
+```bash
+# View PostgreSQL logs (admin namespace)
+oc logs -n rhoai-model-registries -l app=model-registry-db --tail=100 -f
 
 # View Pipeline Server logs
-make logs-dspa
+oc logs -n fraud-detection -l app.kubernetes.io/name=data-science-pipelines-operator --tail=100 -f
+
+# View admin chart RBAC setup job logs
+oc logs job/lakefs-model-registry-rbac-setup -n rhoai-model-registries -f
 ```
 
 Press `Ctrl+C` to stop following logs.
@@ -155,8 +214,8 @@ make get-routes
 # 1. Review the configuration
 make help
 
-# 2. Install the application
-make install
+# 2. Install both charts (or just 'make install' for user chart only)
+make install-all
 
 # 3. Monitor the deployment
 make get-pods
@@ -172,7 +231,7 @@ make get-services  # Kubernetes
 ### Updating the Deployment
 
 ```bash
-# 1. Uninstall the current version
+# 1. Uninstall the current user chart
 make uninstall
 
 # 2. Reinstall with latest changes
@@ -198,8 +257,9 @@ make describe
 make logs-lakefs
 make logs-minio
 make logs-notebook
-make logs-postgres
-make logs-dspa
+
+# Check admin chart pods
+oc get pods -n rhoai-model-registries
 
 # Get service endpoints
 make get-services
@@ -208,72 +268,70 @@ make get-services
 ### Complete Cleanup
 
 ```bash
-# Remove everything including the namespace
+# Remove both charts and delete namespaces
 make clean-all
 ```
 
-This will prompt for confirmation before deleting the namespace and all resources.
+This will uninstall both Helm releases and prompt for confirmation before deleting the namespace.
 
 ## Components Deployed
 
-The Helm chart deploys the following components:
+### User Chart (`fraud-detection`)
 
 | Component | Description | Default State |
 |-----------|-------------|---------------|
 | **lakeFS** | Data version control system with S3-compatible API | Enabled |
 | **MinIO** | S3-compatible object storage backend | Enabled |
-| **PostgreSQL** | Database for Model Registry metadata storage | Enabled |
 | **Jupyter Notebook** | Interactive notebooks for running the fraud detection demo | Enabled |
-| **Model Registry** | OpenShift AI Model Registry for ML model lifecycle management | Enabled |
 | **Data Science Pipeline Server** | OpenShift AI pipeline server for ML workflows | Enabled |
 | **RBAC** | ServiceAccounts and RoleBindings for proper permissions | Enabled |
-| **Post-install hooks** | Automated setup of buckets and repositories | Enabled |
+| **Post-install hooks** | Automated setup of MinIO buckets, lakeFS repositories, and pipeline upload | Enabled |
+
+### Admin Chart (`fraud-detection-admin`)
+
+| Component | Description | Default State |
+|-----------|-------------|---------------|
+| **PostgreSQL** | Database for Model Registry metadata storage | Enabled |
+| **Model Registry** | OpenShift AI Model Registry (`ModelRegistry` CR) for ML model lifecycle | Enabled |
+| **DSC Patch** | Post-install hook to enable Model Registry in the DataScienceCluster | Enabled |
+| **RBAC Setup** | Post-install job to grant users/groups/projects access to the registry | Enabled |
 
 ## Component Details
 
-### Model Registry
+### Model Registry (Admin Chart)
 
 The Model Registry provides centralized management of ML models throughout their lifecycle. It enables versioning, metadata tracking, and governance for trained models.
 
+> [!IMPORTANT]
+> The Model Registry and its PostgreSQL backend are deployed by the **admin chart** (`fraud-detection-admin`), not the user chart. See [fraud-detection-admin/README.md](helm/fraud-detection-admin/README.md) for full configuration details.
+
 #### Configuration
 
-The Model Registry is configured in `values-openshift.yaml`:
+The Model Registry is configured in `helm/fraud-detection-admin/values.yaml`:
 
 ```yaml
 modelRegistry:
   enabled: true
-  createService: true
   name: lakefs-model-registry
   namespace: rhoai-model-registries
-  
-  # Service ports
   grpcPort: 9090
   restPort: 8080
+  access:
+    users: ["user1"]
+    groups: []
+    projects: ["fraud-detection"]
 ```
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `enabled` | Enable/disable Model Registry deployment | `true` |
-| `createService` | Create the ModelRegistry CR | `true` |
-| `name` | Name of the Model Registry instance | `lakefs-model-registry` |
-| `namespace` | Target namespace for Model Registry | `rhoai-model-registries` |
-| `grpcPort` | gRPC API port | `9090` |
-| `restPort` | REST API port | `8080` |
-
-#### PostgreSQL Backend
-
-The Model Registry uses PostgreSQL for metadata storage:
+The admin chart also deploys PostgreSQL in the same namespace:
 
 ```yaml
 postgres:
   enabled: true
-  name: postgres
-  namespace: fraud-detection
+  name: model-registry-db
   user: postgres_user
   password: postgres_password
   database: model_registry
   port: 5432
-  
   persistence:
     enabled: true
     size: 1Gi
@@ -281,7 +339,7 @@ postgres:
 
 #### Accessing the Model Registry
 
-Once deployed, the Model Registry is accessible via:
+Once deployed via `make install-admin`, the Model Registry is accessible via:
 
 - **REST API**: `http://lakefs-model-registry-rest.rhoai-model-registries.svc:8080`
 - **gRPC API**: `lakefs-model-registry-grpc.rhoai-model-registries.svc:9090`
@@ -298,13 +356,16 @@ The Data Science Pipeline Server enables orchestration of ML workflows using Kub
 
 #### Configuration
 
-The DSPA is configured in `values-openshift.yaml`:
+The DSPA is configured in `helm/fraud-detection/values-openshift.yaml`:
 
 ```yaml
 dataSciencePipelines:
   enabled: true
   name: dspa
   enableSamplePipeline: false
+  uploadPipeline: true
+  uploadPipelineUrl: "https://raw.githubusercontent.com/.../7_get_data_train_upload_lakefs.yaml"
+  uploadPipelineName: "7-get-data-train-upload-lakefs"
   database:
     name: mlpipeline
     resources:
@@ -330,6 +391,8 @@ dataSciencePipelines:
 | `enabled` | Enable/disable DSPA deployment | `true` |
 | `name` | Name of the DSPA instance | `dspa` |
 | `enableSamplePipeline` | Deploy sample pipeline | `false` |
+| `uploadPipeline` | Auto-upload the lakeFS pipeline via post-install hook | `true` |
+| `uploadPipelineName` | Display name for the uploaded pipeline | `7-get-data-train-upload-lakefs` |
 | `database.name` | Pipeline database name | `mlpipeline` |
 | `objectStorage.bucket` | S3 bucket for pipeline artifacts | `pipeline-artifacts` |
 | `objectStorage.host` | S3-compatible storage host | `minio.fraud-detection.svc.cluster.local` |
@@ -344,12 +407,21 @@ When enabled, the DSPA deploys:
 - **Scheduled Workflow**: Manages scheduled/recurring pipeline runs
 - **MariaDB**: Stores pipeline metadata and run history
 
+#### Automatic Pipeline Upload
+
+When `uploadPipeline: true` (the default), a post-install hook automatically:
+1. Waits for the DSPA API server to become ready
+2. Downloads the compiled pipeline YAML from GitHub
+3. Uploads it to the pipeline server using the KFP SDK
+
+The pipeline appears in the OpenShift AI dashboard as **7-get-data-train-upload-lakefs** without any manual import.
+
 #### Using the Pipeline Server
 
 After deployment, you can:
 
 1. **Access via OpenShift AI Dashboard**: Navigate to **Data Science Pipelines** in your project
-2. **Import Pipelines**: Upload compiled pipeline YAML files
+2. **Import Pipelines**: Upload compiled pipeline YAML files (or use the auto-uploaded one)
 3. **Create Runs**: Execute pipelines with parameters
 4. **Monitor Progress**: View run status, logs, and artifacts
 
@@ -416,8 +488,11 @@ make install TIMEOUT=20m
 Ensure you have sufficient permissions in your cluster:
 
 ```bash
-# Check your permissions
-kubectl auth can-i create deployments --namespace=fraud-detection
+# Check namespace-level permissions (user chart)
+oc auth can-i create deployments --namespace=fraud-detection
+
+# The admin chart requires cluster-admin
+oc auth can-i create clusterrole
 ```
 
 ### Pod Failures
@@ -432,20 +507,30 @@ make get-pods
 make logs-lakefs
 make logs-minio
 make logs-notebook
-make logs-postgres
-make logs-dspa
+
+# View PostgreSQL logs in the admin namespace
+oc logs -n rhoai-model-registries -l app=model-registry-db --tail=100
 ```
 
 ### Model Registry Not Appearing in OpenShift AI
 
-1. Ensure the `rhoai-model-registries` namespace exists
-2. Check that the ModelRegistry CR was created:
+1. Ensure the admin chart was installed: `helm list -n rhoai-model-registries`
+2. Check that the DataScienceCluster was patched to enable Model Registry:
+   ```bash
+   oc get datasciencecluster default-dsc -o jsonpath='{.spec.components.modelregistry.managementState}'
+   # Should return "Managed"
+   ```
+3. Check that the ModelRegistry CR was created:
    ```bash
    oc get modelregistry -n rhoai-model-registries
    ```
-3. Verify PostgreSQL is running and accessible:
+4. Verify PostgreSQL is running:
    ```bash
-   make logs-postgres
+   oc get pods -n rhoai-model-registries -l app=model-registry-db
+   ```
+5. Check the RBAC setup job completed:
+   ```bash
+   oc logs job/lakefs-model-registry-rbac-setup -n rhoai-model-registries
    ```
 
 ### Pipeline Server Issues
@@ -458,6 +543,11 @@ make logs-dspa
 3. Check MariaDB pod status:
    ```bash
    oc get pods -n fraud-detection | grep mariadb
+   ```
+4. If the auto-uploaded pipeline is missing, check the upload job:
+   ```bash
+   oc get jobs -n fraud-detection | grep upload-pipeline
+   oc logs job/fraud-detection-upload-pipeline -n fraud-detection
    ```
 
 ## Advanced Usage
@@ -484,10 +574,10 @@ To deploy without certain components, create a custom values file:
 
 ```yaml
 # custom-values.yaml
-modelRegistry:
+dataSciencePipelines:
   enabled: false
 
-dataSciencePipelines:
+notebook:
   enabled: false
 ```
 
@@ -497,15 +587,24 @@ Then deploy:
 make install VALUES_FILE=custom-values.yaml
 ```
 
-### Helm Command Equivalent
+### Helm Command Equivalents
 
 The Makefile simplifies Helm commands. Here's what happens under the hood:
 
 ```bash
-# make install is equivalent to:
-helm install fraud-detection helm/fraud-detection \
+# make install (on OpenShift) is equivalent to:
+oc new-project fraud-detection
+helm upgrade --install fraud-detection helm/fraud-detection \
   --namespace fraud-detection \
   --values helm/fraud-detection/values-openshift.yaml \
+  --values helm/fraud-detection/values-openshift-no-registry.yaml \
+  --wait \
+  --timeout 10m
+
+# make install-admin is equivalent to:
+oc create namespace rhoai-model-registries
+helm upgrade --install fraud-detection-admin helm/fraud-detection-admin \
+  --namespace rhoai-model-registries \
   --wait \
   --timeout 10m
 ```
