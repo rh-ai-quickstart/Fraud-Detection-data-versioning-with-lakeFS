@@ -1,0 +1,91 @@
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fraud-detection-admin.postgres.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "fraud-detection-admin.postgres.name" . }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ include "fraud-detection-admin.postgres.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "fraud-detection-admin.postgres.name" . }}
+    spec:
+      containers:
+        - name: postgres
+          {{- if ((.Values.openshift).enabled | default false) }}
+          image: {{ .Values.postgres.imageName | default "postgres" }}:{{ .Values.postgres.imageTag | default "latest" }}
+          {{- else }}
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fraud-detection-admin.postgres.name" . }}
+                  key: database-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fraud-detection-admin.postgres.name" . }}
+                  key: database-password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fraud-detection-admin.postgres.name" . }}
+                  key: database-name
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          {{- if .Values.postgres.persistence.enabled }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: initdb-volume
+              mountPath: /docker-entrypoint-initdb.d
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      {{- if .Values.postgres.persistence.enabled }}
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ include "fraud-detection-admin.postgres.name" . }}
+        - name: initdb-volume
+          configMap:
+            name: {{ include "fraud-detection-admin.postgres.name" . }}-initdb
+      {{- end }}
+{{- end }}

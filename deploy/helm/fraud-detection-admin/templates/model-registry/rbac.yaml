@@ -1,0 +1,192 @@
+{{- $access := .Values.modelRegistry.access | default dict }}
+{{- $users  := $access.users    | default list }}
+{{- $groups := $access.groups   | default list }}
+{{- $projects := $access.projects | default list }}
+{{- $registryName := .Values.modelRegistry.name | default "model-registry" }}
+{{- $registryNS   := .Values.modelRegistry.namespace | default .Release.Namespace }}
+{{- $needsAccess := and .Values.modelRegistry.enabled (or (gt (len $users) 0) (gt (len $groups) 0) (gt (len $projects) 0)) }}
+{{- if $needsAccess }}
+---
+# ── ServiceAccount for the RBAC setup Job ────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $registryName }}-rbac-setup
+  namespace: {{ $registryNS }}
+  labels:
+    app: {{ $registryName }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+# ── ClusterRole: manage OpenShift groups + registry role bindings ────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $registryName }}-rbac-setup
+  labels:
+    app: {{ $registryName }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: ["user.openshift.io"]
+    resources: ["groups"]
+    verbs: ["get", "list", "patch", "update"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "create", "patch", "update"]
+  # The operator's registry-user role grants these permissions.
+  # We must hold the same permissions ourselves or OpenShift's
+  # RBAC escalation check blocks us from binding that role.
+  - apiGroups: [""]
+    resources: ["endpoints", "services"]
+    verbs: ["get"]
+---
+# ── ClusterRoleBinding ───────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $registryName }}-rbac-setup
+  labels:
+    app: {{ $registryName }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $registryName }}-rbac-setup
+subjects:
+  - kind: ServiceAccount
+    name: {{ $registryName }}-rbac-setup
+    namespace: {{ $registryNS }}
+---
+# ── Post-install Job: wait for operator, then grant access ──────────
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $registryName }}-rbac-setup
+  namespace: {{ $registryNS }}
+  labels:
+    app: {{ $registryName }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "30"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.modelRegistry.rbacSetup.backoffLimit | default 5 }}
+  template:
+    metadata:
+      labels:
+        app: {{ $registryName }}
+    spec:
+      serviceAccountName: {{ $registryName }}-rbac-setup
+      restartPolicy: OnFailure
+      containers:
+        - name: setup-rbac
+          image: {{ .Values.modelRegistry.rbacSetup.image | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              GROUP_NAME="{{ $registryName }}-users"
+              MAX={{ .Values.modelRegistry.rbacSetup.maxRetries | default 30 }}
+              ATTEMPT=0
+
+              echo "== RBAC setup for Model Registry: {{ $registryName }} =="
+              echo ""
+              echo "Step 1 – Waiting for operator to create group $GROUP_NAME ..."
+              while [ $ATTEMPT -lt $MAX ]; do
+                if oc get group "$GROUP_NAME" &>/dev/null; then
+                  echo "  Group $GROUP_NAME found."
+                  break
+                fi
+                echo "  Not ready yet (attempt $((ATTEMPT+1))/$MAX) …"
+                sleep 10
+                ATTEMPT=$((ATTEMPT+1))
+              done
+
+              if [ $ATTEMPT -eq $MAX ]; then
+                echo "ERROR: group $GROUP_NAME was never created."
+                echo "Check:  oc get modelregistry -n {{ $registryNS }}"
+                exit 1
+              fi
+
+              ROLE_NAME="registry-user-{{ $registryName }}"
+              echo ""
+              echo "Step 2 – Waiting for operator to create role $ROLE_NAME ..."
+              ATTEMPT=0
+              while [ $ATTEMPT -lt $MAX ]; do
+                if oc get role "$ROLE_NAME" -n "{{ $registryNS }}" &>/dev/null; then
+                  echo "  Role $ROLE_NAME found."
+                  break
+                fi
+                echo "  Not ready yet (attempt $((ATTEMPT+1))/$MAX) …"
+                sleep 10
+                ATTEMPT=$((ATTEMPT+1))
+              done
+
+              if [ $ATTEMPT -eq $MAX ]; then
+                echo "ERROR: role $ROLE_NAME was never created in {{ $registryNS }}."
+                echo "Check:  oc get roles -n {{ $registryNS }}"
+                exit 1
+              fi
+
+              echo ""
+              echo "Step 3 – Adding users to $GROUP_NAME ..."
+              {{- range $users }}
+              if oc get group "$GROUP_NAME" -o jsonpath='{.users}' | grep -qw "{{ . }}"; then
+                echo "  {{ . }} – already a member"
+              else
+                oc adm groups add-users "$GROUP_NAME" "{{ . }}"
+                echo "  {{ . }} – added"
+              fi
+              {{- end }}
+
+              {{- if gt (len $groups) 0 }}
+              echo ""
+              echo "Step 4 – Creating RoleBindings for groups ..."
+              {{- range $groups }}
+              oc create rolebinding "{{ $registryName }}-grp-{{ . | replace ":" "-" | replace "/" "-" }}" \
+                --role="$ROLE_NAME" \
+                --group="{{ . }}" \
+                -n "{{ $registryNS }}" \
+                --dry-run=client -o yaml | oc apply -f -
+              echo "  {{ . }} – bound"
+              {{- end }}
+              {{- end }}
+
+              {{- if gt (len $projects) 0 }}
+              echo ""
+              echo "Step {{ if gt (len $groups) 0 }}5{{ else }}4{{ end }} – Creating RoleBindings for project service accounts ..."
+              {{- range $projects }}
+              oc create rolebinding "{{ $registryName }}-proj-{{ . }}" \
+                --role="$ROLE_NAME" \
+                --group="system:serviceaccounts:{{ . }}" \
+                -n "{{ $registryNS }}" \
+                --dry-run=client -o yaml | oc apply -f -
+              echo "  system:serviceaccounts:{{ . }} – bound"
+              {{- end }}
+              {{- end }}
+
+              echo ""
+              echo "== RBAC setup complete =="
+              oc get group "$GROUP_NAME" -o jsonpath='Members: {.users}' 2>/dev/null
+              echo ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+{{- end }}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: fraud-detection-admin
+description: Cluster-admin chart to create the OpenShift AI Model Registry (ModelRegistry CR). Run this with cluster admin privileges first, then install fraud-detection-openshift with modelRegistry.enabled=false.
+type: application
+version: 1.0.0
+appVersion: "1.0"
+keywords:
+  - model-registry
+  - openshift-ai
+  - rhoai
+  - fraud-detection
+  - admin
+home: https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS
+maintainers:
+  - name: Red Hat AI Quickstart Team
