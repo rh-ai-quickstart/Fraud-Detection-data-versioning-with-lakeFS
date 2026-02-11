@@ -26,7 +26,7 @@ helm install fraud-detection-admin ./fraud-detection-admin \
 Or use the Makefile from the `deploy/` directory:
 
 ```bash
-make install-admin
+make deploy-admin
 ```
 
 ### Uninstall
@@ -34,29 +34,29 @@ make install-admin
 ```bash
 helm uninstall fraud-detection-admin -n rhoai-model-registries
 # or
-make uninstall-admin
+make undeploy-admin
 ```
 
 ## Workflow
 
-1. **Install the admin chart** (requires cluster-admin) to create PostgreSQL, Model Registry, and RBAC:
+1. **Deploy the admin chart** (requires cluster-admin) to create PostgreSQL, Model Registry, and RBAC:
 
    ```bash
-   make install-admin
+   make deploy-admin
    ```
 
-2. **Install the main fraud-detection chart** (namespace admin only) with Model Registry disabled:
+2. **Deploy the main fraud-detection chart** (namespace admin only) with Model Registry disabled:
 
    ```bash
-   make install
+   make deploy
    ```
 
-   On OpenShift, `make install` automatically applies both `values-openshift.yaml` and `values-openshift-no-registry.yaml`, which disables Model Registry in the user chart (since the admin chart manages it).
+   On OpenShift, `make deploy` automatically applies both `values-openshift.yaml` and `values-openshift-no-registry.yaml`, which disables Model Registry in the user chart (since the admin chart manages it).
 
-3. Or **install both at once**:
+3. Or **deploy both at once**:
 
    ```bash
-   make install-all
+   make deploy-all
    ```
 
 ## Configuration

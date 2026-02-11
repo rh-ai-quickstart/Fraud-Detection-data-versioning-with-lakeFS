@@ -73,12 +73,6 @@ After running this quickstart you can answer questions like:
 
 This quickstart was developed and tested on an OpenShift cluster with the following components and resources. This can be considered the minimum requirements.
 
-### Minimum hardware requirements 
-
-| Node Type           | Qty  | vCPU   | Memory (GB) |
-| --------------------|------|-------|--------------|
-| Control Plane       | 3    | 8     | 16           |
-| Worker              | 3    | 8     | 16           |
 
 > [!NOTE]
 > A GPU is not required for this quickstart
@@ -99,7 +93,14 @@ This quickstart was tested with the following software versions:
 
 ### Required user permissions
 
-The user performing this quickstart should have the ability to create a project in OpenShift and OpenShift AI. This requires the cluster role of `admin` (does not require `cluster-admin`)
+The user performing this quickstart should have the ability to create a project in OpenShift and OpenShift AI. This requires the cluster role of `admin`.
+| Chart | Required Role | Purpose |
+|-------|--------------|---------|
+| `fraud-detection-admin` | **cluster-admin** | Deploys Model Registry, PostgreSQL, patches DataScienceCluster, sets up RBAC |
+| `fraud-detection` | **admin** (namespace-level) | Deploys lakeFS, MinIO, Jupyter notebooks, Data Science Pipeline Server |
+
+> [!NOTE]
+> If you only need the core lakeFS demo without Model Registry, you can skip the admin chart and run `make deploy` alone with namespace-level `admin` permissions.
 
 ## Deploy
 
@@ -118,6 +119,8 @@ The steps assume the following pre-requisite products and components are deploye
 7. `oc` (OpenShift) or `kubectl` (Kubernetes) CLI installed
 
 ### Deployment steps
+
+**For Detailed Information see [Deployment ReadMe](/deploy/DEPLOY_README.md)**
 
 1. Clone this repo
 
@@ -139,12 +142,25 @@ oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
 
 4. Deploy using the Makefile (recommended):
 
+The deployment uses two Helm charts. Install both for the full experience:
+> [!NOTE]
+> There are 2 ways to deploy based on your users permissions. If you have cluster admin access you can run anything in this repo. 
+> If you only have user level access, you can have an admin run `make deploy-admin` and then as the user run `make deploy`.
+
+
 ```bash
 # View all available commands and configuration
 make help
 
-# Deploy everything (creates namespace and installs all components)
-make install
+# Option A: Deploy both charts at once (requires cluster-admin)
+make deploy-all
+
+# Option B: Deploy separately
+# Step 1 - Admin chart: PostgreSQL + Model Registry + DSC patch (requires cluster-admin)
+make deploy-admin
+
+# Step 2 - User chart: lakeFS, MinIO, notebooks, pipelines (namespace admin)
+make deploy
 
 # Check deployment status
 make get-pods
@@ -160,10 +176,10 @@ The Makefile will automatically:
 
 ```bash
 # Deploy to a custom namespace
-make install NAMESPACE=my-lakefs-demo
+make deploy NAMESPACE=my-lakefs-demo
 
 # Use a longer timeout for slower clusters
-make install TIMEOUT=15m
+make deploy TIMEOUT=15m
 ```
 
 For detailed Makefile documentation, see [deploy/Readme.md](deploy/Readme.md).
@@ -203,8 +219,8 @@ make logs-notebook
 Remove the deployment using the Makefile:
 
 ```bash
-# Uninstall the Helm release and delete the namespace
-make uninstall
+# Undeploy the Helm release and delete the namespace
+make undeploy
 
 # Or delete everything including namespace
 make clean-all

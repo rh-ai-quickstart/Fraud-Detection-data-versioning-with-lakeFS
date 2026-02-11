@@ -26,7 +26,7 @@ The simplest way to deploy is using the Makefile:
 make help
 
 # Deploy both charts (requires cluster-admin)
-make install-all
+make deploy-all
 
 # Check the status
 make get-pods
@@ -35,7 +35,7 @@ make get-pods
 If you only need the core lakeFS demo (no Model Registry), you can skip the admin chart:
 
 ```bash
-make install
+make deploy
 ```
 
 ## Makefile Commands
@@ -67,8 +67,8 @@ The Makefile supports the following environment variables for customization:
 **Example:** Override defaults:
 
 ```bash
-make install NAMESPACE=my-namespace TIMEOUT=15m
-make install-admin ADMIN_NAMESPACE=my-model-registries
+make deploy NAMESPACE=my-namespace TIMEOUT=15m
+make deploy-admin ADMIN_NAMESPACE=my-model-registries
 ```
 
 ### Platform Detection
@@ -83,17 +83,17 @@ The Makefile automatically detects whether you're running on OpenShift or Kubern
 #### Full Installation (both charts)
 
 ```bash
-# Install admin chart first, then user chart (requires cluster-admin)
-make install-all
+# Deploy admin chart first, then user chart (requires cluster-admin)
+make deploy-all
 ```
 
-This runs `install-admin` followed by `install` (the order is flexible).
+This runs `deploy-admin` followed by `deploy` (the order is flexible).
 
 #### Admin Chart Only
 
 ```bash
 # Deploy PostgreSQL + Model Registry + DSC patch + RBAC (requires cluster-admin)
-make install-admin
+make deploy-admin
 ```
 
 This command will:
@@ -106,7 +106,7 @@ This command will:
 
 ```bash
 # Deploy lakeFS, MinIO, notebooks, pipelines (namespace admin)
-make install
+make deploy
 ```
 
 This command will:
@@ -118,26 +118,26 @@ This command will:
 #### Clean Installation
 
 ```bash
-# Remove the user chart and perform a fresh installation
-make clean-install
+# Remove the user chart and perform a fresh deployment
+make clean-deploy
 ```
 
-This is useful when you want to start fresh, removing all existing resources before reinstalling.
+This is useful when you want to start fresh, removing all existing resources before redeploying.
 
 #### Uninstall
 
 ```bash
 # Remove the user chart and delete its namespace
-make uninstall
+make undeploy
 
 # Remove the admin chart
-make uninstall-admin
+make undeploy-admin
 
 # Remove both charts
-make uninstall-all
+make undeploy-all
 ```
 
-**Warning:** `make uninstall` will delete the namespace and all data (including PersistentVolumeClaims).
+**Warning:** `make undeploy` will delete the namespace and all data (including PersistentVolumeClaims).
 
 ### Namespace Management
 
@@ -214,8 +214,8 @@ make get-routes
 # 1. Review the configuration
 make help
 
-# 2. Install both charts (or just 'make install' for user chart only)
-make install-all
+# 2. Deploy both charts (or just 'make deploy' for user chart only)
+make deploy-all
 
 # 3. Monitor the deployment
 make get-pods
@@ -231,17 +231,17 @@ make get-services  # Kubernetes
 ### Updating the Deployment
 
 ```bash
-# 1. Uninstall the current user chart
-make uninstall
+# 1. Undeploy the current user chart
+make undeploy
 
-# 2. Reinstall with latest changes
-make install
+# 2. Redeploy with latest changes
+make deploy
 ```
 
 Or use the combined command:
 
 ```bash
-make clean-install
+make clean-deploy
 ```
 
 ### Troubleshooting
@@ -339,7 +339,7 @@ postgres:
 
 #### Accessing the Model Registry
 
-Once deployed via `make install-admin`, the Model Registry is accessible via:
+Once deployed via `make deploy-admin`, the Model Registry is accessible via:
 
 - **REST API**: `http://lakefs-model-registry-rest.rhoai-model-registries.svc:8080`
 - **gRPC API**: `lakefs-model-registry-grpc.rhoai-model-registries.svc:9090`
@@ -480,7 +480,7 @@ minio:
 If the installation times out, increase the timeout value:
 
 ```bash
-make install TIMEOUT=20m
+make deploy TIMEOUT=20m
 ```
 
 ### Permission Errors
@@ -555,17 +555,17 @@ oc logs -n rhoai-model-registries -l app=model-registry-db --tail=100
 ### Using Custom Values Files
 
 ```bash
-make install VALUES_FILE=my-custom-values.yaml
+make deploy VALUES_FILE=my-custom-values.yaml
 ```
 
 ### Deploying to Multiple Namespaces
 
 ```bash
 # Deploy to dev environment
-make install NAMESPACE=fraud-detection-dev RELEASE_NAME=fraud-dev
+make deploy NAMESPACE=fraud-detection-dev RELEASE_NAME=fraud-dev
 
 # Deploy to production environment
-make install NAMESPACE=fraud-detection-prod RELEASE_NAME=fraud-prod
+make deploy NAMESPACE=fraud-detection-prod RELEASE_NAME=fraud-prod
 ```
 
 ### Disabling Components
@@ -584,7 +584,7 @@ notebook:
 Then deploy:
 
 ```bash
-make install VALUES_FILE=custom-values.yaml
+make deploy VALUES_FILE=custom-values.yaml
 ```
 
 ### Helm Command Equivalents
@@ -592,7 +592,7 @@ make install VALUES_FILE=custom-values.yaml
 The Makefile simplifies Helm commands. Here's what happens under the hood:
 
 ```bash
-# make install (on OpenShift) is equivalent to:
+# make deploy (on OpenShift) is equivalent to:
 oc new-project fraud-detection
 helm upgrade --install fraud-detection helm/fraud-detection \
   --namespace fraud-detection \
@@ -601,7 +601,7 @@ helm upgrade --install fraud-detection helm/fraud-detection \
   --wait \
   --timeout 10m
 
-# make install-admin is equivalent to:
+# make deploy-admin is equivalent to:
 oc create namespace rhoai-model-registries
 helm upgrade --install fraud-detection-admin helm/fraud-detection-admin \
   --namespace rhoai-model-registries \

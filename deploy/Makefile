@@ -60,8 +60,8 @@ delete-namespace: ## Delete the namespace (WARNING: This will delete all resourc
 
 ##@ Helm Chart Management
 
-.PHONY: install-admin
-install-admin: ## Install admin chart (PostgreSQL + Model Registry + RBAC; requires cluster-admin)
+.PHONY: deploy-admin
+deploy-admin: ## Deploy admin chart (PostgreSQL + Model Registry + RBAC; requires cluster-admin)
 	@echo "Creating namespace $(ADMIN_NAMESPACE) if needed..."
 	@$(KUBECTL) create namespace $(ADMIN_NAMESPACE) 2>/dev/null || true
 	@echo "Installing $(ADMIN_RELEASE_NAME) in namespace $(ADMIN_NAMESPACE)..."
@@ -70,20 +70,20 @@ install-admin: ## Install admin chart (PostgreSQL + Model Registry + RBAC; requi
 		--wait \
 		--timeout $(TIMEOUT)
 	@echo ""
-	@echo "Admin chart installed (PostgreSQL + Model Registry)."
+	@echo "Admin chart deployed (PostgreSQL + Model Registry)."
 	@echo "  Monitor RBAC setup: oc logs job/lakefs-model-registry-rbac-setup -n $(ADMIN_NAMESPACE) -f"
 
-.PHONY: uninstall-admin
-uninstall-admin: ## Uninstall the fraud-detection-admin chart
+.PHONY: undeploy-admin
+undeploy-admin: ## Undeploy the fraud-detection-admin chart
 	@echo "Uninstalling $(ADMIN_RELEASE_NAME) from namespace $(ADMIN_NAMESPACE)..."
 	@helm uninstall $(ADMIN_RELEASE_NAME) --namespace $(ADMIN_NAMESPACE) 2>/dev/null || echo "Release $(ADMIN_RELEASE_NAME) not found"
-	@echo "Admin chart uninstall complete!"
+	@echo "Admin chart undeploy complete!"
 
-.PHONY: clean-install
-clean-install: uninstall install ## Clean install the fraud-detection Helm chart
+.PHONY: clean-deploy
+clean-deploy: undeploy deploy ## Clean deploy the fraud-detection Helm chart
 
-.PHONY: install
-install: ## Install the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipelines)
+.PHONY: deploy
+deploy: ## Deploy the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipelines)
 	@echo "Installing $(RELEASE_NAME) in namespace $(NAMESPACE)..."
 	@oc new-project $(NAMESPACE) || echo "Project $(NAMESPACE) already exists"
 	@if [ "$(PLATFORM)" = "openshift" ]; then \
@@ -102,25 +102,25 @@ install: ## Install the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pi
 			--wait \
 			--timeout $(TIMEOUT); \
 	fi
-	@echo "Installation complete!"
+	@echo "Deployment complete!"
 
-.PHONY: install-all
-install-all: install-admin install ## Install both charts (admin first, then user – order is flexible)
+.PHONY: deploy-all
+deploy-all: deploy-admin deploy ## Deploy both charts (admin first, then user – order is flexible)
 	@echo ""
-	@echo "Both charts installed."
+	@echo "Both charts deployed."
 	@echo "  oc get pods -n $(ADMIN_NAMESPACE)"
 	@echo "  oc get pods -n $(NAMESPACE)"
 
-.PHONY: uninstall 
-uninstall:
+.PHONY: undeploy 
+undeploy:
 	@echo "Uninstalling $(RELEASE_NAME) from namespace $(NAMESPACE)..."
 	# This will delete the release and the namespace becuase there is persistent volume claims in the namespace
 	@helm uninstall $(RELEASE_NAME) --namespace $(NAMESPACE) || echo "Release $(RELEASE_NAME) not found"
 	@oc delete namespace $(NAMESPACE) || echo "Namespace $(NAMESPACE) not found so skipping deletion"
-	@echo "Uninstall complete!"
+	@echo "Undeploy complete!"
 
-.PHONY: uninstall-all
-uninstall-all: uninstall uninstall-admin ## Uninstall both charts
+.PHONY: undeploy-all
+undeploy-all: undeploy undeploy-admin ## Undeploy both charts
 
 ##@ Status and Information
 .PHONY: get-pods
@@ -164,8 +164,8 @@ get-services: ## Get all services
 	@$(KUBECTL) get services -n $(NAMESPACE)
 
 .PHONY: clean
-clean: uninstall ## Uninstall the chart (alias for uninstall)
+clean: undeploy ## Undeploy the chart (alias for undeploy)
 
 .PHONY: clean-all
-clean-all: uninstall-all delete-namespace ## Uninstall both charts and delete the namespace
+clean-all: undeploy-all delete-namespace ## Undeploy both charts and delete the namespace
 	@echo "Complete cleanup finished!"
