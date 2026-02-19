@@ -176,7 +176,7 @@ repositories:
 # Notebook configuration - OpenShift overrides
 notebook:
   enabled: true  # Enable notebook for OpenShift AI
-  
+
   # Username for the notebook
   username: "admin"
   
@@ -231,7 +231,7 @@ notebook:
 
 # PostgreSQL configuration for Model Registry
 postgres:
-  enabled: true
+  enabled: false # disabled here; the fraud-detection-admin chart now deploys PostgreSQL alongside the Model Registry in rhoai-model-registries.
   name: postgres
   # Note: This is the namespace for the model registry. It is not the same as the namespace for the fraud detection project.
   # namespace: rhoai-model-registries  # Target namespace for PostgreSQL deployment
@@ -304,12 +304,8 @@ dataSciencePipelines:
       secretKey: AWS_SECRET_ACCESS_KEY
 
 # Model Registry configuration
-modelRegistry:
-  enabled: true
-  createService: true
+modelRegistry: # disabled here; the fraud-detection-admin chart now deploys the Model Registry in rhoai-model-registries.
+  enabled: false
+  createService: false
   name: lakefs-model-registry
   namespace: rhoai-model-registries
-  
-  # Service ports
-  grpcPort: 9090
-  restPort: 8080

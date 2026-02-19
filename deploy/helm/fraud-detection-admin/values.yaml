@@ -1,0 +1,77 @@
+# fraud-detection-admin
+# Self-contained chart that deploys PostgreSQL + Model Registry in the
+# rhoai-model-registries namespace.  Requires cluster-admin privileges.
+# Install independently of the main fraud-detection chart.
+
+# ── PostgreSQL (deployed alongside the Model Registry) ─────────────────
+postgres:
+  enabled: true
+  name: model-registry-db
+
+  image:
+    repository: docker.io/postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+
+  # OpenShift ImageStream (used when openshift.enabled=true)
+  imageName: postgres
+  imageTag: "16-alpine"
+
+  # Database credentials
+  user: postgres_user
+  password: postgres_password
+  database: model_registry
+  port: 5432
+
+  # Persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClassName: ""   # Uses default storage class
+
+  # Resources
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# ── OpenShift toggle (set to true when deploying on OpenShift) ─────────
+openshift:
+  enabled: true
+
+# ── Model Registry (OpenShift AI / RHODS) ──────────────────────────────
+modelRegistry:
+  enabled: true
+  name: lakefs-model-registry
+  namespace: rhoai-model-registries
+  grpcPort: 9090
+  restPort: 8080
+
+  # Users / groups / projects that should see the registry in the
+  # OpenShift AI dashboard.  A post-install Job waits for the operator to
+  # create the auto-generated group, then adds them.
+  access:
+    users:
+      - user1
+    groups: []
+    projects:
+      - fraud-detection
+
+  # Post-install RBAC setup Job settings
+  rbacSetup:
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+    maxRetries: 30          # 30 × 10 s = 5 min max wait
+    backoffLimit: 5
+
+# ── DataScienceCluster patch hook ──────────────────────────────────────
+dataScienceCluster:
+  patchEnabled: true
+  name: default-dsc
+  managementState: Managed
+  image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+  maxRetries: 30
+  backoffLimit: 3

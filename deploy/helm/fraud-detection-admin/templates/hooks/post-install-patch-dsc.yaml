@@ -1,0 +1,108 @@
+{{- if .Values.dataScienceCluster.patchEnabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["datasciencecluster.opendatahub.io"]
+    resources: ["datascienceclusters"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  labels:
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.dataScienceCluster.backoffLimit | default 3 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection-admin.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "fraud-detection-admin.fullname" . }}-patch-dsc
+      restartPolicy: OnFailure
+      containers:
+        - name: patch-dsc
+          image: {{ .Values.dataScienceCluster.image | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Patching DataScienceCluster '{{ .Values.dataScienceCluster.name }}' to enable model registry..."
+              
+              # Wait for DSC to exist (in case it's being created)
+              retries=0
+              max_retries={{ .Values.dataScienceCluster.maxRetries | default 30 }}
+              until oc get datasciencecluster {{ .Values.dataScienceCluster.name }} &>/dev/null || [ $retries -eq $max_retries ]; do
+                echo "Waiting for DataScienceCluster '{{ .Values.dataScienceCluster.name }}' to exist... ($retries/$max_retries)"
+                sleep 5
+                retries=$((retries+1))
+              done
+              
+              if [ $retries -eq $max_retries ]; then
+                echo "ERROR: DataScienceCluster '{{ .Values.dataScienceCluster.name }}' not found after $max_retries attempts"
+                exit 1
+              fi
+              
+              # Patch the DSC
+              oc patch datasciencecluster {{ .Values.dataScienceCluster.name }} \
+                --type='json' \
+                -p='[{"op": "replace", "path": "/spec/components/modelregistry/managementState", "value":"{{ .Values.dataScienceCluster.managementState }}"}]'
+              
+              echo "Successfully patched DataScienceCluster '{{ .Values.dataScienceCluster.name }}'"
+              echo "Model registry managementState set to: {{ .Values.dataScienceCluster.managementState }}"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+{{- end }}

@@ -1,0 +1,20 @@
+{{- if and .Values.postgres.enabled .Values.postgres.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "fraud-detection-admin.postgres.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "fraud-detection-admin.postgres.name" . }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.postgres.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size | default "1Gi" }}
+  {{- if .Values.postgres.persistence.storageClassName }}
+  storageClassName: {{ .Values.postgres.persistence.storageClassName | quote }}
+  {{- end }}
+{{- end }}

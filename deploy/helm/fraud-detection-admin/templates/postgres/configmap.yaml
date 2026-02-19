@@ -1,0 +1,16 @@
+{{- if .Values.postgres.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fraud-detection-admin.postgres.name" . }}-initdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "fraud-detection-admin.postgres.name" . }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    echo "PostgreSQL initialisation complete for database: ${POSTGRES_DB}"
+{{- end }}

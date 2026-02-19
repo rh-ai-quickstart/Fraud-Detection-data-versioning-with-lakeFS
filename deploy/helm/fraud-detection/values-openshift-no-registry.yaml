@@ -1,0 +1,12 @@
+# Use with fraud-detection-openshift when the Model Registry is created by
+# fraud-detection-admin (cluster admin) instead of this chart.
+#
+# Usage:
+#   helm install fraud-detection ./fraud-detection \
+#     -f values-openshift.yaml -f values-openshift-no-registry.yaml \
+#     -n fraud-detection --create-namespace
+#
+# Or: helm upgrade --install ... --set modelRegistry.enabled=false
+
+modelRegistry:
+  enabled: false

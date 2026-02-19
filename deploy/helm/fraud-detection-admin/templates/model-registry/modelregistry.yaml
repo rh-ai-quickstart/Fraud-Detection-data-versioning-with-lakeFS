@@ -1,0 +1,28 @@
+{{- if .Values.modelRegistry.enabled }}
+---
+apiVersion: modelregistry.opendatahub.io/v1beta1
+kind: ModelRegistry
+metadata:
+  name: {{ .Values.modelRegistry.name | default "model-registry" }}
+  namespace: {{ .Values.modelRegistry.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ .Values.modelRegistry.name | default "model-registry" }}
+    {{- include "fraud-detection-admin.labels" . | nindent 4 }}
+spec:
+  grpc:
+    port: {{ .Values.modelRegistry.grpcPort | default 9090 }}
+  rest:
+    port: {{ .Values.modelRegistry.restPort | default 8080 }}
+    serviceRoute: enabled
+  postgres:
+    host: {{ include "fraud-detection-admin.postgres.host" . }}
+    port: {{ .Values.postgres.port | default 5432 }}
+    database: {{ .Values.postgres.database }}
+    username: {{ .Values.postgres.user }}
+    passwordSecret:
+      name: {{ .Values.modelRegistry.name | default "model-registry" }}-db-secret
+      key: database-password
+    {{- if .Values.postgres.sslMode }}
+    sslMode: {{ .Values.postgres.sslMode }}
+    {{- end }}
+{{- end }}
