@@ -17,5 +17,10 @@ subjects:
 - kind: ServiceAccount
   name: {{ include "fraud-detection.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
+{{- if ne (include "fraud-detection.serviceAccountName" .) "lakefs-notebook" }}
+- kind: ServiceAccount
+  name: lakefs-notebook
+  namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}
 

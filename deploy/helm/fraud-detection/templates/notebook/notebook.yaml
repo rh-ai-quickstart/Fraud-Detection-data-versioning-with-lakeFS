@@ -10,7 +10,7 @@ metadata:
     opendatahub.io/dashboard: "true"
     opendatahub.io/odh-managed: "true"
   annotations:
-    notebooks.opendatahub.io/inject-oauth: "true"
+    notebooks.opendatahub.io/inject-auth: "true"
     opendatahub.io/username: {{ .Values.notebook.username | default "admin" | quote }}
     helm.sh/hook-weight: "0"
 spec:

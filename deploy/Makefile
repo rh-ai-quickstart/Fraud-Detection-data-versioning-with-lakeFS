@@ -5,7 +5,7 @@
 NAMESPACE ?= fraud-detection
 RELEASE_NAME ?= fraud-detection
 CHART_DIR ?= helm/fraud-detection
-VALUES_FILE ?= values-openshift.yaml
+VALUES_FILE ?= values.yaml
 TIMEOUT ?= 10m
 
 # Admin chart (PostgreSQL + Model Registry – requires cluster admin)
@@ -90,8 +90,7 @@ deploy: ## Deploy the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipe
 		echo "Using OpenShift values..."; \
 		helm upgrade --install $(RELEASE_NAME) $(CHART_DIR) \
 			--namespace $(NAMESPACE) \
-			--values $(CHART_DIR)/values-openshift.yaml \
-			--values $(CHART_DIR)/values-openshift-no-registry.yaml \
+			--values $(CHART_DIR)/values.yaml \
 			--wait \
 			--timeout $(TIMEOUT); \
 	else \
