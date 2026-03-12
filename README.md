@@ -198,9 +198,10 @@ make get-services
 ```
 
 2. Access the lakeFS browser-based UI using the route/URL:
-   - Leave the username set to `admin`
+   - Update the username set to `something`
    - Enter your email address (or a bogus email address)
    - Download the `access_key_id` and `secret_access_key` displayed on the new page, as they will not be accessible later on
+    - Default value: `something` + `simple` | See values.yaml for actual values yours may differ. 
    - Go back to the login page and log in using those credentials
 
 ### Monitor deployment
