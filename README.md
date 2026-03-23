@@ -62,9 +62,13 @@ After running this quickstart you can answer questions like:
 6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
 7. (Optional) Run a pipeline that reads/writes through lakeFS so pipeline outputs are also versioned
 
-### See it in action 
+### See it in action
 
-See a [demo](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view) of lakeFS with OpenShift AI, and the value they bring together.
+<p align="center">
+  <a href="https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view">
+    <img src="docs/images/RHOS4AIVideoThumbnail.png" width="600">
+  </a>
+</p>
 
 ### Architecture diagrams
 
