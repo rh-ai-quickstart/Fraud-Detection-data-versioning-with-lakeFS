@@ -64,7 +64,7 @@ After running this quickstart you can answer questions like:
 
 ### See it in action 
 
-See a [demo]([#detailed-description](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view)) of lakeFS with OpenShift AI, and the value they bring together.
+See a [demo](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view) of lakeFS with OpenShift AI, and the value they bring together.
 
 ### Architecture diagrams
 
