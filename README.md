@@ -285,4 +285,4 @@ In real AI platforms, the point isn't just versioning—it's controlled promotio
 * Partner: lakeFS
 * Partner product: lakeFS
 * Industry: Financial Services
-* Use case: Data versioning, MLOps, Fraud detection
+* Use case: Financial fraud detection with data versioning
