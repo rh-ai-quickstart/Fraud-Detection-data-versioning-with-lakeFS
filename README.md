@@ -1,16 +1,14 @@
-# Fraud Detection data versioning with lakeFS
+# Implement fraud detection with data versioning using lakeFS
 
-<!-- TITLE: Fraud Detection data versioning with lakeFS -->
-
-This AI quickstart demonstrates how to use **lakeFS as an AI data control plane** for Red Hat OpenShift AI using the fraud-detection tutorial workflow.
-
-<!-- SHORT DESCRIPTION: Demonstrates lakeFS as an AI data control plane for OpenShift AI using a fraud-detection workflow with data versioning. -->
+This quickstart demonstrates how to use **lakeFS&reg; as an AI data control plane** for Red Hat OpenShift AI&reg; using the fraud-detection tutorial workflow.
 
 ## Table of contents
 
-- [Detailed description](#detailed-description)
-  - [See it in action](#see-it-in-action)
-  - [Architecture diagrams](#architecture-diagrams)
+- [Overview](#overview)
+- [Architecture](#architecture)
+  - [Data plane vs control plane](#data-plane-vs-control-plane)
+  - [What you'll do (and what lakeFS adds)](#what-youll-do-and-what-lakefs-adds)
+- [See it in action](#see-it-in-action)
 - [Requirements](#requirements)
   - [Minimum hardware requirements](#minimum-hardware-requirements)
   - [Minimum software requirements](#minimum-software-requirements)
@@ -19,15 +17,20 @@ This AI quickstart demonstrates how to use **lakeFS as an AI data control plane*
   - [Pre-requisites](#pre-requisites)
   - [Deployment steps](#deployment-steps)
   - [Access lakeFS UI](#access-lakefs-ui)
+  - [Monitor deployment](#monitor-deployment)
   - [Delete](#delete)
 - [Documentation](#documentation)
 - [References](#references)
 - [Technical details](#technical-details)
 - [Tags](#tags)
 
-## Detailed description
+## Overview
 
 The purpose of this AI quickstart is to highlight the benefits of data versioning, provided by lakeFS, in an AI/ML environment. lakeFS allows the data engineer to manage the lifecycle of data using the same workflow a developer uses to manage source code, using git. This means that, like source code, data can be versioned, branched, merged and pulled from a git repository, although the data is actually stored in a backend object storage.
+
+## Architecture
+
+![lakeFS architecture](docs/images/lakefs-arch.png "Architecture showing the integration of lakeFS with OpenShift and OpenShift AI")
 
 ### Data plane vs control plane
 
@@ -62,18 +65,20 @@ After running this quickstart you can answer questions like:
 6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
 7. (Optional) Run a pipeline that reads/writes through lakeFS so pipeline outputs are also versioned
 
-### See it in action 
+## See it in action 
 
-See a [demo](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view) of lakeFS with OpenShift AI, and the value they bring together.
-
-### Architecture diagrams
-
-![lakeFS architecture](docs/images/lakefs-arch.png "lakeFS architecture")
+See a [demo of lakeFS with OpenShift AI](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view), and the value they bring together.
 
 ## Requirements
 
-This quickstart was developed and tested on an OpenShift cluster with the following components and resources. This can be considered the minimum requirements.
+This quickstart was developed and tested on a Red Hat OpenShift&reg; cluster with the following components and resources. This can be considered the minimum requirements.
 
+### Minimum hardware requirements
+
+| Node Type     | Qty | vCPU | Memory (GB) |
+|---------------|-----|------|-------------|
+| Control Plane | 3   | 8    | 16          |
+| Worker        | 2   | 8    | 32          |
 
 > [!NOTE]
 > A GPU is not required for this quickstart
@@ -84,10 +89,10 @@ This quickstart was tested with the following software versions:
 
 | Software                           | Version  |
 | ---------------------------------- |:---------|
-| Red Hat OpenShift                  | 4.20.5   |
-| Red Hat OpenShift Service Mesh     | 2.5.11-0 |
-| Red Hat OpenShift Serverless       | 1.37.0   |
-| Red Hat OpenShift AI               | 2.25     |
+| OpenShift                          | 4.20.5   |
+| OpenShift Service Mesh             | 2.5.11-0 |
+| OpenShift Serverless               | 1.37.0   |
+| OpenShift AI                       | 2.25     |
 | helm                               | 3.17.1   |
 | lakeFS                             | 1.73.0   |
 | MinIO                              | latest   |
@@ -111,10 +116,10 @@ The deployment uses Helm charts managed through a convenient Makefile interface.
 
 The steps assume the following pre-requisite products and components are deployed and functional with required permissions on the cluster:
 
-1. Red Hat OpenShift Container Platform (or Kubernetes cluster)
-2. Red Hat OpenShift Service Mesh
-3. Red Hat OpenShift Serverless
-4. Red Hat OpenShift AI
+1. OpenShift Container Platform (or Kubernetes cluster)
+2. OpenShift Service Mesh
+3. OpenShift Serverless
+4. OpenShift AI
 5. User has `admin` permissions in the cluster
 6. Helm 3.x installed
 7. `oc` (OpenShift) or `kubectl` (Kubernetes) CLI installed
@@ -125,19 +130,19 @@ The steps assume the following pre-requisite products and components are deploye
 
 1. Clone this repo
 
-```bash
+```
 git clone https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git
 ```
 
 2. cd to `deploy` directory
 
-```bash
+```
 cd Fraud-Detection-data-versioning-with-lakeFS/deploy
 ```
 
 3. Login to the OpenShift cluster:
 
-```bash
+```
 oc login --token=<user_token> --server=https://api.<openshift_cluster_fqdn>:6443
 ```
 
@@ -149,7 +154,7 @@ The deployment uses two Helm charts. Install both for the full experience:
 > If you only have user level access, you can have an admin run `make deploy-admin` and then as the user run `make deploy`.
 
 
-```bash
+```
 # View all available commands and configuration
 make help
 
@@ -175,7 +180,7 @@ The Makefile will automatically:
 
 **Customize deployment** (optional):
 
-```bash
+```
 # Deploy to a custom namespace
 make deploy NAMESPACE=my-lakefs-demo
 
@@ -189,7 +194,7 @@ For detailed Makefile documentation, see [deploy/Readme.md](deploy/Readme.md).
 
 1. Get the lakeFS route or service URL:
 
-```bash
+```
 # For OpenShift
 make get-routes
 
@@ -206,7 +211,7 @@ make get-services
 
 ### Monitor deployment
 
-```bash
+```
 # View all resources
 make get-all
 
@@ -220,7 +225,7 @@ make logs-notebook
 
 Remove the deployment using the Makefile:
 
-```bash
+```
 # Undeploy the Helm release and delete the namespace
 make undeploy
 
@@ -230,7 +235,7 @@ make clean-all
 
 Alternatively, you can manually delete the project/namespace:
 
-```bash
+```
 oc delete namespace fraud-detection
 # or
 kubectl delete namespace fraud-detection
@@ -246,12 +251,12 @@ For detailed guides on specific topics, see:
 | [Notebooks Guide](docs/NOTEBOOKS.md) | Detailed documentation for all Jupyter notebooks |
 | [Pipelines Quick Reference](demo/pipelines/PipelinesReadMe.md) | Quick reference for pipeline files |
 
-## References x
+## References
 
 * lakeFS documentation [v1.73](https://docs.lakefs.io/v1.73/)
 * OpenShift AI documentation [v2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
 * OpenShift AI Fraud Detection [example](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/openshift_ai_tutorial_-_fraud_detection_example)
-xx* OpenShift AI Pipelines [documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/working_with_data_science_pipelines)
+* OpenShift AI Pipelines [documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25/html/working_with_data_science_pipelines)
 
 ## Technical details
 
@@ -275,15 +280,6 @@ In real AI platforms, the point isn't just versioning—it's controlled promotio
 - Merge = "publish" approved data/model artifacts to consumers
 
 ## Tags
-
-<!-- 
-Title: Fraud Detection data versioning with lakeFS
-Description: Demonstrates lakeFS as an AI data control plane for OpenShift AI using a fraud-detection workflow.
-Industry: Financial Services
-Product: OpenShift AI
-Use case: Data versioning, MLOps, Fraud detection
-Contributor org: Red Hat
--->
 
 * Product: OpenShift AI
 * Partner: lakeFS
