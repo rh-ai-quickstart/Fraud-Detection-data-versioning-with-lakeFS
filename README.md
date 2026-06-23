@@ -1,14 +1,14 @@
-# Implement fraud detection with data versioning using lakeFS
+# Prevent fraud with data versioning using lakeFS
 
-This quickstart demonstrates how to use **lakeFS&reg; as an AI data control plane** for Red Hat OpenShift AI&reg; using the fraud-detection tutorial workflow.
+This quickstart demonstrates how to use lakeFS&reg; as an AI data control plane for Red Hat OpenShift AI&reg; using the fraud-detection tutorial workflow.
 
 ## Table of contents
 
 - [Overview](#overview)
+- [See it in action](#see-it-in-action)
 - [Architecture](#architecture)
   - [Data plane vs control plane](#data-plane-vs-control-plane)
   - [What you'll do (and what lakeFS adds)](#what-youll-do-and-what-lakefs-adds)
-- [See it in action](#see-it-in-action)
 - [Requirements](#requirements)
   - [Minimum hardware requirements](#minimum-hardware-requirements)
   - [Minimum software requirements](#minimum-software-requirements)
@@ -27,6 +27,10 @@ This quickstart demonstrates how to use **lakeFS&reg; as an AI data control plan
 ## Overview
 
 The purpose of this AI quickstart is to highlight the benefits of data versioning, provided by lakeFS, in an AI/ML environment. lakeFS allows the data engineer to manage the lifecycle of data using the same workflow a developer uses to manage source code, using git. This means that, like source code, data can be versioned, branched, merged and pulled from a git repository, although the data is actually stored in a backend object storage.
+
+## See it in action 
+
+See a [demo of lakeFS with OpenShift AI](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view), and the value they bring together.
 
 ## Architecture
 
@@ -65,13 +69,9 @@ After running this quickstart you can answer questions like:
 6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
 7. (Optional) Run a pipeline that reads/writes through lakeFS so pipeline outputs are also versioned
 
-## See it in action 
-
-See a [demo of lakeFS with OpenShift AI](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view), and the value they bring together.
-
 ## Requirements
 
-This quickstart was developed and tested on a Red Hat OpenShift&reg; cluster with the following components and resources. This can be considered the minimum requirements.
+This quickstart was developed and tested on a Red Hat OpenShift cluster with the following components and resources. This can be considered the minimum requirements.
 
 ### Minimum hardware requirements
 
@@ -283,6 +283,5 @@ In real AI platforms, the point isn't just versioning—it's controlled promotio
 
 * Product: OpenShift AI
 * Partner: lakeFS
-* Partner product: lakeFS
-* Industry: Financial Services
+* Industry: Banking and securities
 * Use case: Financial fraud detection with data versioning
