@@ -1,0 +1,110 @@
+{{- if .Values.distributedWorkloads.kueue.labelNamespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    resourceNames: ["{{ .Release.Namespace }}"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["localqueues"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fraud-detection.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "fraud-detection.fullname" . }}-kueue-namespace
+      containers:
+        - name: kueue-namespace
+          image: {{ .Values.distributedWorkloads.kueue.image | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              NS="{{ .Release.Namespace }}"
+              echo "Labeling namespace ${NS} for Kueue management..."
+              oc label namespace "${NS}" kueue.openshift.io/managed=true --overwrite
+
+              if [ "{{ .Values.distributedWorkloads.kueue.waitForLocalQueue }}" != "true" ]; then
+                echo "Skipping LocalQueue wait."
+                exit 0
+              fi
+
+              retries=0
+              max_retries={{ .Values.distributedWorkloads.kueue.maxRetries | default 30 }}
+              until oc get localqueue -n "${NS}" 2>/dev/null | awk 'NR>1 {found=1; exit} END {exit !found}'; do
+                if [ "${retries}" -ge "${max_retries}" ]; then
+                  echo "WARNING: LocalQueue was not created in ${NS}. Enable Kueue/distributed workloads first."
+                  exit 0
+                fi
+                echo "Waiting for LocalQueue in ${NS}... (${retries}/${max_retries})"
+                sleep 10
+                retries=$((retries + 1))
+              done
+              echo "LocalQueue is available in ${NS}."
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+{{- end }}

@@ -125,3 +125,39 @@ PostgreSQL host with namespace
 {{- printf "%s.%s.svc.cluster.local" (include "postgres.fullname" .) (.Values.postgres.namespace | default .Release.Namespace) }}
 {{- end }}
 
+{{/*
+Notebook Studio UI fullname
+*/}}
+{{- define "ui.fullname" -}}
+{{- printf "%s-notebook-studio" (include "fraud-detection.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Notebook Studio UI labels
+*/}}
+{{- define "ui.labels" -}}
+helm.sh/chart: {{ include "fraud-detection.chart" . }}
+{{ include "ui.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Notebook Studio UI selector labels
+*/}}
+{{- define "ui.selectorLabels" -}}
+app.kubernetes.io/name: notebook-studio
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: ui
+{{- end }}
+
+{{/*
+Notebook Studio UI image reference (built in CI/CD and pushed to ui.image.repository)
+*/}}
+{{- define "ui.image" -}}
+{{- printf "%s:%s" .Values.ui.image.repository (.Values.ui.image.tag | default "latest") }}
+{{- end }}
+

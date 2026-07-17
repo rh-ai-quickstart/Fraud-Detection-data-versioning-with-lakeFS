@@ -1,0 +1,53 @@
+{{- if and .Values.ui.enabled .Values.ui.servingRuntime.enabled }}
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: {{ .Values.ui.servingRuntime.name | default "kserve-ovms" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ui.labels" . | nindent 4 }}
+    opendatahub.io/dashboard: "true"
+  annotations:
+    opendatahub.io/runtime-version: v2026.1.0
+    openshift.io/display-name: OpenVINO Model Server
+spec:
+  annotations:
+    opendatahub.io/kserve-runtime: ovms
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8888"
+  containers:
+    - name: kserve-container
+      image: {{ .Values.ui.servingRuntime.image | quote }}
+      args:
+        - --model_name={{`{{.Name}}`}}
+        - --port=8001
+        - --rest_port=8888
+        - --model_path=/mnt/models
+        - --file_system_poll_wait_seconds=0
+        - --metrics_enable
+      ports:
+        - containerPort: 8888
+          protocol: TCP
+  multiModel: false
+  protocolVersions:
+    - v2
+    - grpc-v2
+  supportedModelFormats:
+    - autoSelect: true
+      name: openvino_ir
+      version: opset13
+    - name: onnx
+      version: "1"
+    - autoSelect: true
+      name: tensorflow
+      version: "1"
+    - autoSelect: true
+      name: tensorflow
+      version: "2"
+    - autoSelect: true
+      name: paddle
+      version: "2"
+    - autoSelect: true
+      name: pytorch
+      version: "2"
+{{- end }}

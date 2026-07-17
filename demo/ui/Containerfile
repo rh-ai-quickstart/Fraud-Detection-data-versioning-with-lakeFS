@@ -1,0 +1,47 @@
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/python-311:1
+
+WORKDIR /app
+
+COPY ui/requirements-streamlit-poc.txt ui/
+
+# Install lightweight deps first (faster rebuilds when UI code changes).
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+      'streamlit>=1.33,<2' \
+      'requests>=2.31,<3' \
+      'lakefs==0.7.1' \
+      's3fs==2024.10.0' \
+      'boto3>=1.34.0,<2' \
+      'codeflare-sdk>=0.19.1,<1'
+
+# Heavier ML stack (installed in a separate layer for caching).
+RUN pip install --no-cache-dir \
+      'pandas>=2.0,<3' \
+      'numpy>=1.26,<3' \
+      'scikit-learn>=1.3,<2' \
+      'onnx>=1.15,<2' \
+      'onnxruntime>=1.16,<2' \
+      'tf2onnx>=1.16,<2' \
+      'tensorflow>=2.15,<3'
+
+COPY ui/ ui/
+COPY scripts/ scripts/
+
+WORKDIR /app/ui
+
+# Writable home for arbitrary OpenShift UIDs (do not chmod /tmp).
+USER 0
+RUN mkdir -p /app/.streamlit /app/models/fraud/1 && \
+    chgrp -R 0 /app && \
+    chmod -R g+rwX /app
+USER 1001
+
+ENV HOME=/app \
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "streamlit_app.py"]

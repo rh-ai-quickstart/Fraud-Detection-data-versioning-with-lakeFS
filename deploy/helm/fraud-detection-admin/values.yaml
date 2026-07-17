@@ -71,7 +71,25 @@ modelRegistry:
 dataScienceCluster:
   patchEnabled: true
   name: default-dsc
+  # Legacy alias kept for compatibility with earlier values files.
   managementState: Managed
   image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
   maxRetries: 30
   backoffLimit: 3
+  components:
+    modelregistry:
+      enabled: true
+      managementState: Managed
+    codeflare:
+      enabled: true
+      managementState: Managed
+    ray:
+      enabled: true
+      managementState: Managed
+    kueue:
+      enabled: true
+      # OpenShift AI 2.25+ expects the external Red Hat Kueue operator (Unmanaged).
+      # Use Managed only on older releases that still ship embedded Kueue.
+      managementState: Unmanaged
+  distributedWorkloads:
+    maxRetries: 60

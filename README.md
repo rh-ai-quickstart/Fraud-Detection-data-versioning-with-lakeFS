@@ -60,14 +60,16 @@ After running this quickstart you can answer questions like:
 
 1. Deploy MinIO (object storage) and lakeFS (S3-compatible versioning gateway)
 2. Configure OpenShift AI to use **lakeFS as its S3 endpoint** (data connection)
-3. Run the fraud-detection notebooks to:
-   - load training data from lakeFS
-   - train a model
-   - write the model artifact back to lakeFS
+3. Use the **Fraud Detection Workflow Studio** (Streamlit UI) to:
+   - validate your lakeFS and OpenShift AI environment
+   - load training data from lakeFS and train a fraud model
+   - save the model artifact back to lakeFS
+   - register the model in OpenShift AI Model Registry
+   - deploy the model to a KServe inference endpoint and run REST inference
 4. Create a **lakeFS branch** for a data change (e.g., updated labels / new transactions)
 5. Write updated training data to the branch, **commit** it, and retrain
 6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
-7. (Optional) Run a pipeline that reads/writes through lakeFS so pipeline outputs are also versioned
+7. (Optional) Run a pipeline or distributed training job that reads/writes through lakeFS so pipeline outputs are also versioned
 
 ## Requirements
 
@@ -103,7 +105,7 @@ The user performing this quickstart should have the ability to create a project 
 | Chart | Required Role | Purpose |
 |-------|--------------|---------|
 | `fraud-detection-admin` | **cluster-admin** | Deploys Model Registry, PostgreSQL, patches DataScienceCluster, sets up RBAC |
-| `fraud-detection` | **admin** (namespace-level) | Deploys lakeFS, MinIO, Jupyter notebooks, Data Science Pipeline Server |
+| `fraud-detection` | **admin** (namespace-level) | Deploys lakeFS, MinIO, Workflow Studio UI, Data Science Pipeline Server |
 
 > [!NOTE]
 > If you only need the core lakeFS demo without Model Registry, you can skip the admin chart and run `make deploy` alone with namespace-level `admin` permissions.
@@ -165,7 +167,7 @@ make deploy-all
 # Step 1 - Admin chart: PostgreSQL + Model Registry + DSC patch (requires cluster-admin)
 make deploy-admin
 
-# Step 2 - User chart: lakeFS, MinIO, notebooks, pipelines (namespace admin)
+# Step 2 - User chart: lakeFS, MinIO, Workflow Studio UI, pipelines (namespace admin)
 make deploy
 
 # Check deployment status
@@ -175,7 +177,7 @@ make get-pods
 The Makefile will automatically:
 - Detect if you're on OpenShift or Kubernetes
 - Create the namespace (`fraud-detection` by default)
-- Deploy lakeFS, MinIO, PostgreSQL, Jupyter notebooks, Model Registry, and Data Science Pipeline Server
+- Deploy lakeFS, MinIO, the Workflow Studio UI, Model Registry (via the admin chart), and Data Science Pipeline Server
 - Set up required RBAC and post-install configurations
 
 **Customize deployment** (optional):
@@ -188,7 +190,7 @@ make deploy NAMESPACE=my-lakefs-demo
 make deploy TIMEOUT=15m
 ```
 
-For detailed Makefile documentation, see [deploy/Readme.md](deploy/Readme.md).
+For detailed Makefile documentation, see [deploy/DEPLOY_README.md](deploy/DEPLOY_README.md).
 
 ### Access lakeFS UI
 
@@ -209,6 +211,52 @@ make get-services
     - See values.yaml for actual values
    - Go back to the login page and log in using those credentials
 
+### Access Workflow Studio UI
+
+The **Fraud Detection Workflow Studio** is a Streamlit application deployed with the user chart. It guides you through the end-to-end fraud-detection workflow on OpenShift AI.
+
+1. Get the UI route URL:
+
+```bash
+# OpenShift (recommended)
+make get-ui-route
+
+# Or list all routes in the namespace
+make get-routes
+```
+
+2. Open the URL in your browser. The UI walks through these stages:
+
+| Stage | Description |
+|-------|-------------|
+| **0. Readiness** | Validate lakeFS, data connections, and OpenShift AI services |
+| **1. Train** | Train the fraud model using data from lakeFS |
+| **2. Save to lakeFS** | Upload the trained model artifact to lakeFS |
+| **3. Register Model** | Register the model in OpenShift AI Model Registry |
+| **4. Deploy Model** | Create a KServe InferenceService |
+| **5. REST Inference** | Send inference requests and review fraud predictions |
+| **8. Distributed** | Submit CodeFlare + Ray distributed training jobs |
+
+3. Monitor the UI deployment:
+
+```bash
+make logs-ui
+```
+
+**Customize the UI image** (optional, for local development):
+
+The deployed UI pulls a pre-built image from Quay. To build and publish your own changes:
+
+```bash
+# Log in to Quay (once)
+make login-ui-quay
+
+# Build, push, and restart the UI deployment
+make publish-ui-image
+```
+
+Individual steps are also available: `make build-ui-image`, `make push-ui-image`.
+
 ### Monitor deployment
 
 ```
@@ -218,7 +266,7 @@ make get-all
 # Check specific component logs
 make logs-lakefs
 make logs-minio
-make logs-notebook
+make logs-ui
 ```
 
 ### Delete
@@ -247,8 +295,8 @@ For detailed guides on specific topics, see:
 
 | Guide | Description |
 |-------|-------------|
+| [Deployment Guide](deploy/DEPLOY_README.md) | Makefile commands, component details, and troubleshooting |
 | [Pipelines Guide](docs/PIPELINES.md) | Comprehensive guide to Data Science Pipelines setup and usage |
-| [Notebooks Guide](docs/NOTEBOOKS.md) | Detailed documentation for all Jupyter notebooks |
 | [Pipelines Quick Reference](demo/pipelines/PipelinesReadMe.md) | Quick reference for pipeline files |
 
 ## References

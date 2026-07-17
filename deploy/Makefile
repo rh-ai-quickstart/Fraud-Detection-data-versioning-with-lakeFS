@@ -8,6 +8,11 @@ CHART_DIR ?= helm/fraud-detection
 VALUES_FILE ?= values.yaml
 TIMEOUT ?= 10m
 
+# Notebook Studio UI image (Quay)
+UI_IMAGE ?= quay.io/rh-ai-quickstart/fraud-detection-studio:latest
+UI_BUILD_PLATFORM ?= linux/amd64
+DEMO_DIR ?= ../demo
+
 # Admin chart (PostgreSQL + Model Registry – requires cluster admin)
 ADMIN_NAMESPACE ?= rhoai-model-registries
 ADMIN_RELEASE_NAME ?= fraud-detection-admin
@@ -82,6 +87,38 @@ undeploy-admin: ## Undeploy the fraud-detection-admin chart
 .PHONY: clean-deploy
 clean-deploy: undeploy deploy ## Clean deploy the fraud-detection Helm chart
 
+.PHONY: login-ui-quay
+login-ui-quay: ## Log in to Quay.io for pushing the UI image (podman login quay.io)
+	@podman login quay.io
+
+.PHONY: build-ui-image
+build-ui-image: ## Build Notebook Studio UI image locally with podman (linux/amd64 for OpenShift)
+	@echo "Building UI image: $(UI_IMAGE) for platform $(UI_BUILD_PLATFORM)"
+	@podman build --platform $(UI_BUILD_PLATFORM) -f $(DEMO_DIR)/ui/Containerfile -t $(UI_IMAGE) $(DEMO_DIR)
+
+.PHONY: push-ui-image
+push-ui-image: build-ui-image ## Build and push Notebook Studio UI image to Quay
+	@echo "Pushing UI image: $(UI_IMAGE)"
+	@podman push $(UI_IMAGE)
+
+.PHONY: publish-ui-image
+publish-ui-image: push-ui-image ## Build, push to Quay, and restart the UI deployment
+	@oc rollout restart deployment/lakefs-notebook-studio -n $(NAMESPACE)
+	@oc rollout status deployment/lakefs-notebook-studio -n $(NAMESPACE) --timeout=300s
+
+.PHONY: logs-ui
+logs-ui: ## Show Notebook Studio UI logs
+	@$(KUBECTL) logs -n $(NAMESPACE) -l app.kubernetes.io/component=ui --tail=100 -f
+
+.PHONY: get-ui-route
+get-ui-route: ## Get Notebook Studio UI route URL (OpenShift only)
+	@if [ "$(PLATFORM)" = "openshift" ]; then \
+		$(KUBECTL) get route lakefs-notebook-studio -n $(NAMESPACE) -o jsonpath='https://{.spec.host}{"\n"}' 2>/dev/null || \
+		$(KUBECTL) get routes -n $(NAMESPACE) -l app.kubernetes.io/component=ui; \
+	else \
+		echo "Routes are only available on OpenShift"; \
+	fi
+
 .PHONY: deploy
 deploy: ## Deploy the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipelines)
 	@echo "Installing $(RELEASE_NAME) in namespace $(NAMESPACE)..."
@@ -102,6 +139,9 @@ deploy: ## Deploy the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipe
 			--timeout $(TIMEOUT); \
 	fi
 	@echo "Deployment complete!"
+	@echo ""
+	@echo "Notebook Studio UI pulls from $(UI_IMAGE) (built in CI/CD)."
+	@echo "For local UI changes, run: make publish-ui-image"
 
 .PHONY: deploy-all
 deploy-all: deploy-admin deploy ## Deploy both charts (admin first, then user – order is flexible)
