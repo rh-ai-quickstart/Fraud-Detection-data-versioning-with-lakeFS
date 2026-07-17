@@ -1,0 +1,18 @@
+{{- if .Values.ui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ui.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ui.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.ui.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.ui.service.port | default 8501 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ui.selectorLabels" . | nindent 4 }}
+{{- end }}

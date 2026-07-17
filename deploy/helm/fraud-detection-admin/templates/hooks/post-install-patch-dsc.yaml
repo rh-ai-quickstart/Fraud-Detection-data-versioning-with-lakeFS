@@ -74,30 +74,73 @@ spec:
             - /bin/bash
             - -c
             - |
-              set -e
-              echo "Patching DataScienceCluster '{{ .Values.dataScienceCluster.name }}' to enable model registry..."
-              
-              # Wait for DSC to exist (in case it's being created)
+              set -euo pipefail
+              DSC="{{ .Values.dataScienceCluster.name }}"
+              echo "Patching DataScienceCluster '${DSC}'..."
+
               retries=0
               max_retries={{ .Values.dataScienceCluster.maxRetries | default 30 }}
-              until oc get datasciencecluster {{ .Values.dataScienceCluster.name }} &>/dev/null || [ $retries -eq $max_retries ]; do
-                echo "Waiting for DataScienceCluster '{{ .Values.dataScienceCluster.name }}' to exist... ($retries/$max_retries)"
+              until oc get datasciencecluster "${DSC}" &>/dev/null || [ "${retries}" -eq "${max_retries}" ]; do
+                echo "Waiting for DataScienceCluster '${DSC}' to exist... (${retries}/${max_retries})"
                 sleep 5
-                retries=$((retries+1))
+                retries=$((retries + 1))
               done
-              
-              if [ $retries -eq $max_retries ]; then
-                echo "ERROR: DataScienceCluster '{{ .Values.dataScienceCluster.name }}' not found after $max_retries attempts"
+
+              if [ "${retries}" -eq "${max_retries}" ]; then
+                echo "ERROR: DataScienceCluster '${DSC}' not found after ${max_retries} attempts"
                 exit 1
               fi
-              
-              # Patch the DSC
-              oc patch datasciencecluster {{ .Values.dataScienceCluster.name }} \
-                --type='json' \
-                -p='[{"op": "replace", "path": "/spec/components/modelregistry/managementState", "value":"{{ .Values.dataScienceCluster.managementState }}"}]'
-              
-              echo "Successfully patched DataScienceCluster '{{ .Values.dataScienceCluster.name }}'"
-              echo "Model registry managementState set to: {{ .Values.dataScienceCluster.managementState }}"
+
+              PATCH='{"spec":{"components":{'
+              {{- $components := .Values.dataScienceCluster.components }}
+              {{- if $components.modelregistry.enabled }}
+              PATCH+='"modelregistry":{"managementState":"{{ $components.modelregistry.managementState }}"},'
+              {{- end }}
+              {{- if $components.codeflare.enabled }}
+              PATCH+='"codeflare":{"managementState":"{{ $components.codeflare.managementState }}"},'
+              {{- end }}
+              {{- if $components.ray.enabled }}
+              PATCH+='"ray":{"managementState":"{{ $components.ray.managementState }}"},'
+              {{- end }}
+              {{- if $components.kueue.enabled }}
+              PATCH+='"kueue":{"managementState":"{{ $components.kueue.managementState }}"},'
+              {{- end }}
+              PATCH="${PATCH%,}"  # trim trailing comma
+              PATCH+='}}}'
+
+              echo "Applying merge patch: ${PATCH}"
+              oc patch datasciencecluster "${DSC}" --type=merge -p "${PATCH}"
+
+              echo "Successfully patched DataScienceCluster '${DSC}'"
+              echo "Configured components:"
+              {{- if $components.modelregistry.enabled }}
+              echo "  modelregistry -> {{ $components.modelregistry.managementState }}"
+              {{- end }}
+              {{- if $components.codeflare.enabled }}
+              echo "  codeflare -> {{ $components.codeflare.managementState }}"
+              {{- end }}
+              {{- if $components.ray.enabled }}
+              echo "  ray -> {{ $components.ray.managementState }}"
+              {{- end }}
+              {{- if $components.kueue.enabled }}
+              echo "  kueue -> {{ $components.kueue.managementState }}"
+              {{- end }}
+
+              echo "Waiting for Ray API (ray.io/rayclusters) to become available..."
+              operator_retries=0
+              operator_max_retries={{ .Values.dataScienceCluster.distributedWorkloads.maxRetries | default 60 }}
+              until oc api-resources --api-group=ray.io 2>/dev/null | grep -q rayclusters; do
+                if [ "${operator_retries}" -ge "${operator_max_retries}" ]; then
+                  echo "WARNING: Timed out waiting for Ray API registration. Check:"
+                  echo "  oc api-resources --api-group=ray.io"
+                  echo "  oc get pods -n redhat-ods-applications | egrep 'kuberay|codeflare|kueue'"
+                  exit 0
+                fi
+                echo "Waiting for ray.io API... (${operator_retries}/${operator_max_retries})"
+                sleep 10
+                operator_retries=$((operator_retries + 1))
+              done
+              echo "Ray API is registered on the cluster."
           resources:
             requests:
               cpu: 100m

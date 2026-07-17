@@ -17,6 +17,8 @@ openshift:
 # RBAC configuration
 rbac:
   create: true
+  rayWorkloads:
+    enabled: true
 
 # ServiceAccount configuration
 serviceAccount:
@@ -228,6 +230,75 @@ notebook:
     repo: "https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-lakeFS.git"
     branch: "main"
     image: "alpine/git:latest"
+
+# Notebook Studio UI (Streamlit) configuration
+ui:
+  enabled: true
+  replicaCount: 1
+  waitForLakeFS: true
+  automountServiceAccountToken: true
+
+  # Image is built in CI/CD and pushed to the registry below.
+  image:
+    repository: quay.io/rh-ai-quickstart/fraud-detection-studio
+    tag: latest
+    pullPolicy: Always
+
+  # Optional pull secret if the registry repository is private.
+  imagePullSecrets: []
+
+  service:
+    type: ClusterIP
+    port: 8501
+
+  route:
+    enabled: true
+
+  lakefs:
+    url: "http://lakefs"
+
+  minio:
+    endpoint: "http://minio:9000"
+
+  inference:
+    # Defaults to in-cluster KServe/OpenShift AI predictor for the release namespace.
+    url: ""
+    serviceName: fraud-detection-predictor
+    modelName: fraud-detection
+    port: 80
+
+  modelRegistry:
+    url: "http://lakefs-model-registry.rhoai-model-registries.svc:8080"
+    name: lakefs-model-registry
+
+  deploy:
+    namespace: ""
+    dataConnectionKey: my-storage
+    serviceAccountName: lakefs-notebook
+
+  servingRuntime:
+    enabled: true
+    name: kserve-ovms
+    image: registry.redhat.io/rhoai/odh-openvino-model-server-rhel9@sha256:1ab58519c50e2c3a9ebf0fee6d0708b1b5a0ae972aefcc722d87b2f62239a033
+
+  resources:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+  podAnnotations: {}
+  extraEnv: []
+
+# Distributed workloads (CodeFlare / Ray / Kueue)
+distributedWorkloads:
+  kueue:
+    labelNamespace: true
+    waitForLocalQueue: true
+    maxRetries: 30
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
 
 # PostgreSQL configuration for Model Registry
 postgres:

@@ -1,0 +1,137 @@
+{{- if .Values.ui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ui.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ui.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ui.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "ui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ui.selectorLabels" . | nindent 8 }}
+      annotations:
+        fraud-detection.io/helm-revision: {{ .Release.Revision | quote }}
+        {{- with .Values.ui.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.ui.automountServiceAccountToken | default true }}
+      {{- with .Values.ui.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ui.waitForLakeFS | default true }}
+      initContainers:
+        - name: wait-for-lakefs
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for lakeFS to be ready..."
+              until curl -sf http://{{ include "lakefs.fullname" . }}/api/v1/healthcheck; do
+                echo -n "."
+                sleep 5
+              done
+              echo "lakeFS is ready!"
+      {{- end }}
+      containers:
+        - name: notebook-studio
+          image: {{ include "ui.image" . | quote }}
+          imagePullPolicy: {{ .Values.ui.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ui.service.port | default 8501 }}
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /tmp
+            - name: LAKECTL_SERVER_ENDPOINT_URL
+              value: {{ .Values.ui.lakefs.url | default .Values.lakefs.secret.endpoint | quote }}
+            - name: LAKEFS_REPO_NAME
+              value: {{ .Values.lakefs.secret.repo_name | quote }}
+            - name: LAKEFS_DEFAULT_REGION
+              value: {{ .Values.lakefs.secret.default_region | quote }}
+            - name: LAKECTL_CREDENTIALS_ACCESS_KEY_ID
+              value: {{ .Values.lakefs.secret.notebook_access_key_id | quote }}
+            - name: LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY
+              value: {{ .Values.lakefs.secret.notebook_secret_access_key | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.lakefs.secret.notebook_access_key_id | quote }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.lakefs.secret.notebook_secret_access_key | quote }}
+            - name: AWS_S3_ENDPOINT
+              value: {{ .Values.ui.lakefs.url | default .Values.lakefs.secret.endpoint | quote }}
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.lakefs.secret.default_region | quote }}
+            - name: AWS_S3_BUCKET
+              value: {{ .Values.lakefs.secret.repo_name | quote }}
+            - name: PIPELINE_ARTIFACTS_ENDPOINT_URL
+              value: {{ .Values.ui.minio.endpoint | default .Values.notebook.minio.endpoint | quote }}
+            - name: PIPELINE_ARTIFACTS_ACCESS_KEY_ID
+              value: {{ .Values.minio.secret.user | quote }}
+            - name: PIPELINE_ARTIFACTS_SECRET_ACCESS_KEY
+              value: {{ .Values.minio.secret.password | quote }}
+            - name: PIPELINE_ARTIFACTS_S3_BUCKET
+              value: pipeline-artifacts
+            {{- $inferUrl := .Values.ui.inference.url -}}
+            {{- if not $inferUrl }}
+            {{- $inferUrl = printf "http://%s.%s.svc.cluster.local/v2/models/%s/infer" (.Values.ui.inference.serviceName | default "fraud-detection-predictor") .Release.Namespace (.Values.ui.inference.modelName | default "fraud-detection") }}
+            {{- end }}
+            - name: INFERENCE_URL
+              value: {{ $inferUrl | quote }}
+            {{- if .Values.ui.inference.modelName }}
+            - name: INFERENCE_MODEL_NAME
+              value: {{ .Values.ui.inference.modelName | quote }}
+            {{- end }}
+            - name: INFERENCE_PORT
+              value: {{ .Values.ui.inference.port | default 80 | quote }}
+            - name: MODEL_REGISTRY_URL
+              value: {{ .Values.ui.modelRegistry.url | quote }}
+            - name: MODEL_REGISTRY_NAME
+              value: {{ .Values.ui.modelRegistry.name | quote }}
+            - name: DATA_CONNECTION_KEY
+              value: {{ .Values.ui.deploy.dataConnectionKey | quote }}
+            - name: DEPLOY_NAMESPACE
+              value: {{ .Values.ui.deploy.namespace | default .Release.Namespace | quote }}
+            - name: INFERENCE_SERVICE_ACCOUNT
+              value: {{ .Values.ui.deploy.serviceAccountName | default (include "fraud-detection.serviceAccountName" .) | quote }}
+            - name: SERVING_RUNTIME_NAME
+              value: {{ .Values.ui.servingRuntime.name | default "kserve-ovms" | quote }}
+            {{- with .Values.ui.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.ui.resources }}
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+{{- end }}
