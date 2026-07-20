@@ -1,32 +1,33 @@
-# Prevent fraud with data versioning using lakeFS
+# Securing AI Fraud Models Through Advanced Data Versioning
 
-This quickstart demonstrates how to use lakeFS&reg; as an AI data control plane for Red Hat OpenShift AI&reg; using the fraud-detection tutorial workflow.
+Data versioning with lakeFS&reg; improves fraud detection by ensuring model training and transaction data are audit-ready, reproducible, and easy to roll back.
 
 ## Table of contents
 
 - [Detailed Description](#detailed-description)
-- [See it in action](#see-it-in-action)
-- [Architecture](#architecture)
-  - [Data plane vs control plane](#data-plane-vs-control-plane)
-  - [What you'll do (and what lakeFS adds)](#what-youll-do-and-what-lakefs-adds)
+  - [See it in action](#see-it-in-action)
+  - [Architecture](#architecture)
+    - [Data plane vs control plane](#data-plane-vs-control-plane)
+    - [What you'll do (and what lakeFS adds)](#what-youll-do-and-what-lakefs-adds)
 - [Requirements](#requirements)
-  - [Minimum hardware requirements](#minimum-hardware-requirements)
-  - [Minimum software requirements](#minimum-software-requirements)
+  - [Hardware requirements](#hardware-requirements)
+  - [Software requirements](#software-requirements)
   - [Required user permissions](#required-user-permissions)
 - [Deploy](#deploy)
   - [Pre-requisites](#pre-requisites)
-  - [Deployment steps](#deployment-steps)
+  - [Installation](#installation)
   - [Access lakeFS UI](#access-lakefs-ui)
+  - [Access Workflow Studio UI](#access-workflow-studio-ui)
   - [Monitor deployment](#monitor-deployment)
   - [Delete](#delete)
-- [Documentation](#documentation)
 - [References](#references)
+  - [External product documentation](#external-product-documentation)
 - [Technical details](#technical-details)
 - [Tags](#tags)
 
 ## Detailed Description
 
-Financial institutions process millions of transactions every single day, making them prime targets for sophisticated and constantly evolving fraud tactics. Finding and stopping these schemes in real-time is absolutely essential to preserving a bank’s bottom line, as fraud directly drains revenue and eats into profits. Beyond the direct financial hit, institutions are legally bound by strict compliance mandates, such as Anti-Money Laundering (AML) and Know Your Customer (KYC) regulations, where a failure to detect fraudulent activity can result in massive punitive fines. Perhaps most importantly, customer trust is the bedrock of banking; a single high-profile breach or a pattern of compromised customer accounts can permanently damage an institution's reputation and drive patrons to competitors.
+Financial institutions process millions of transactions every single day, making them prime targets for sophisticated and constantly evolving fraud tactics. Finding and stopping these schemes in real-time is absolutely essential to preserving a bank’s bottom line, as fraud directly drains revenue and eats into profits. Beyond the direct financial hit, institutions are legally bound by strict compliance mandates, where a failure to detect fraudulent activity can result in massive punitive fines. Perhaps most importantly, customer trust is the bedrock of banking.
 
 Modern fraud detection relies heavily on Artificial Intelligence and Machine Learning models that must be constantly retrained and updated to keep pace with shifting fraud patterns. This rapid evolution makes structured data versioning a critical component of the data pipeline. When training and fine-tuning models, versioning allows data scientists to snapshot the exact state of a dataset used to build a specific model iteration. If a newly deployed model begins generating a wave of false positives in production, teams can quickly isolate the issue because they know the exact data version that introduced the anomaly. Furthermore, versioning provides a safety net for incoming production data, allowing teams to isolate and revert corrupted or misformatted transaction streams before they pollute the broader data lake.
 
@@ -36,20 +37,20 @@ To manage these complex data lifecycles, lakeFS has emerged as a robust solution
 
 ---
 
-## See it in action 
+### See it in action 
 
 See a [demo of lakeFS with OpenShift AI](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view), and the value they bring together.
 
-## Architecture
+### Architecture
 
 ![lakeFS architecture](docs/images/lakefs-arch.png "Architecture showing the integration of lakeFS with OpenShift and OpenShift AI")
 
-### Data plane vs control plane
+#### Data plane vs control plane
 
 This quickstart intentionally separates responsibilities:
 
 - **Data plane (object storage)**  
-  MinIO / S3 stores the bytes: datasets, models, and pipeline artifacts.
+  S3 object storage stores the bytes: datasets, models, and pipeline artifacts.
 
 - **Control plane (lakeFS)**  
   lakeFS adds Git-like semantics (branch, commit, merge, revert) and lineage metadata *on top of* the data in object storage.
@@ -57,18 +58,18 @@ This quickstart intentionally separates responsibilities:
 - **Compatibility**  
   lakeFS exposes an **S3-compatible API**, so OpenShift AI and S3-native tools can use it as a drop-in endpoint without code changes.
 
-After running this quickstart you can answer questions like:
+After running this quickstart you can answer questions including:
 
 - "Which exact dataset version trained the model that's currently served?"
 - "What changed between the dataset used for model v1 and v2?"
 - "Can we reproduce last month's metrics exactly?"
 - "Can we roll back immediately if a bad data update ships?"
 
-### What you'll do (and what lakeFS adds)
+#### What you'll do (and what lakeFS adds)
 
-1. Deploy MinIO (object storage) and lakeFS (S3-compatible versioning gateway)
-2. Configure OpenShift AI to use **lakeFS as its S3 endpoint** (data connection)
-3. Use the **Fraud Detection Workflow Studio** (Streamlit UI) to:
+1. Deploy MinIO&reg; (object storage) and lakeFS (S3-compatible versioning gateway)
+2. Configure Red Hat OpenShift AI&reg; to use **lakeFS as its S3 endpoint** (data connection)
+3. Use the **Fraud Detection Workflow Studio** web app user interface to:
    - validate your lakeFS and OpenShift AI environment
    - load training data from lakeFS and train a fraud model
    - save the model artifact back to lakeFS
@@ -81,9 +82,9 @@ After running this quickstart you can answer questions like:
 
 ## Requirements
 
-This quickstart was developed and tested on a Red Hat OpenShift cluster with the following components and resources. This can be considered the minimum requirements.
+This quickstart was developed and tested on a Red Hat OpenShift&reg; cluster with the following components and resources. This can be considered the minimum requirements.
 
-### Minimum hardware requirements
+### Hardware requirements
 
 | Node Type     | Qty | vCPU | Memory (GB) |
 |---------------|-----|------|-------------|
@@ -93,7 +94,7 @@ This quickstart was developed and tested on a Red Hat OpenShift cluster with the
 > [!NOTE]
 > A GPU is not required for this quickstart
 
-### Minimum software requirements
+### Software requirements
 
 This quickstart was tested with the following software versions:
 
@@ -134,7 +135,7 @@ The steps assume the following pre-requisite products and components are deploye
 6. Helm 3.x installed
 7. `oc` (OpenShift) or `kubectl` (Kubernetes) CLI installed
 
-### Deployment steps
+### Installation
 
 **For Detailed Information see [Deployment ReadMe](/deploy/DEPLOY_README.md)**
 
@@ -297,9 +298,9 @@ oc delete namespace fraud-detection
 kubectl delete namespace fraud-detection
 ```
 
-## Documentation
+## References
 
-For detailed guides on specific topics, see:
+For additional detailed guides on specific topics, see:
 
 | Guide | Description |
 |-------|-------------|
@@ -307,7 +308,7 @@ For detailed guides on specific topics, see:
 | [Pipelines Guide](docs/PIPELINES.md) | Comprehensive guide to Data Science Pipelines setup and usage |
 | [Pipelines Quick Reference](demo/pipelines/PipelinesReadMe.md) | Quick reference for pipeline files |
 
-## References
+### External product documentation
 
 * lakeFS documentation [v1.73](https://docs.lakefs.io/v1.73/)
 * OpenShift AI documentation [v2.25](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.25)
