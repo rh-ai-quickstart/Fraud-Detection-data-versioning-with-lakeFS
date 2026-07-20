@@ -4,7 +4,7 @@ This quickstart demonstrates how to use lakeFS&reg; as an AI data control plane 
 
 ## Table of contents
 
-- [Overview](#overview)
+- [Detailed Description](#detailed-description)
 - [See it in action](#see-it-in-action)
 - [Architecture](#architecture)
   - [Data plane vs control plane](#data-plane-vs-control-plane)
@@ -24,9 +24,17 @@ This quickstart demonstrates how to use lakeFS&reg; as an AI data control plane 
 - [Technical details](#technical-details)
 - [Tags](#tags)
 
-## Overview
+## Detailed Description
 
-The purpose of this AI quickstart is to highlight the benefits of data versioning, provided by lakeFS, in an AI/ML environment. lakeFS allows the data engineer to manage the lifecycle of data using the same workflow a developer uses to manage source code, using git. This means that, like source code, data can be versioned, branched, merged and pulled from a git repository, although the data is actually stored in a backend object storage.
+Financial institutions process millions of transactions every single day, making them prime targets for sophisticated and constantly evolving fraud tactics. Finding and stopping these schemes in real-time is absolutely essential to preserving a bank’s bottom line, as fraud directly drains revenue and eats into profits. Beyond the direct financial hit, institutions are legally bound by strict compliance mandates, such as Anti-Money Laundering (AML) and Know Your Customer (KYC) regulations, where a failure to detect fraudulent activity can result in massive punitive fines. Perhaps most importantly, customer trust is the bedrock of banking; a single high-profile breach or a pattern of compromised customer accounts can permanently damage an institution's reputation and drive patrons to competitors.
+
+Modern fraud detection relies heavily on Artificial Intelligence and Machine Learning models that must be constantly retrained and updated to keep pace with shifting fraud patterns. This rapid evolution makes structured data versioning a critical component of the data pipeline. When training and fine-tuning models, versioning allows data scientists to snapshot the exact state of a dataset used to build a specific model iteration. If a newly deployed model begins generating a wave of false positives in production, teams can quickly isolate the issue because they know the exact data version that introduced the anomaly. Furthermore, versioning provides a safety net for incoming production data, allowing teams to isolate and revert corrupted or misformatted transaction streams before they pollute the broader data lake.
+
+In highly regulated financial sectors, institutions cannot treat AI as a black box and must instead be prepared to defend how and why a model made a specific prediction. Regulatory audits frequently require teams to explain a model's behavior at a specific point in the past, a task that is only possible if you can perfectly recreate the exact dataset the model was trained on. Additionally, data scientists rely on reproducibility for debugging and regression testing. When a model's accuracy drops, engineers need to roll back to previous data states to run side-by-side comparisons, an impossible feat if the underlying data lake has already mutated without a version history.
+
+To manage these complex data lifecycles, lakeFS has emerged as a robust solution that brings the familiar version control concepts of software engineering directly to exabyte-scale data lakes. It provides a Git-like interface that allows data engineers to branch, commit, merge, and revert data seamlessly. This enables a data scientist to create an isolated branch of production data to safely train a new fraud model without duplicating physical storage. Because lakeFS offers a standard, S3-compatible interface, it acts as a drop-in replacement for Amazon S3 and stores both data and AI artifacts natively. This compatibility allows financial institutions to integrate lakeFS directly into their existing toolchains—such as Apache Spark, TensorFlow, PyTorch, and Databricks—without needing to rewrite any of their existing model-training code.
+
+---
 
 ## See it in action 
 
