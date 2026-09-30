@@ -33,7 +33,7 @@ class ReadinessTabComponent:
                 lakefs_access_key = st.text_input("LAKECTL_CREDENTIALS_ACCESS_KEY_ID", value=env.lakefs_access_key)
                 lakefs_secret_key = st.text_input("LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY", value=env.lakefs_secret_key, type="password")
             with c2:
-                aws_s3_endpoint = st.text_input("AWS_S3_ENDPOINT", value=env.aws_s3_endpoint or "http://minio:9000")
+                aws_s3_endpoint = st.text_input("AWS_S3_ENDPOINT", value=env.aws_s3_endpoint or "http://s4:7480")
                 aws_access_key = st.text_input("AWS_ACCESS_KEY_ID", value=env.aws_access_key)
                 aws_secret_key = st.text_input("AWS_SECRET_ACCESS_KEY", value=env.aws_secret_key, type="password")
                 lakefs_repo_name = st.text_input("LAKEFS_REPO_NAME", value=env.lakefs_repo_name)

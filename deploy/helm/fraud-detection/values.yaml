@@ -5,6 +5,15 @@
 global:
   openshift: true
 
+# Images for Jobs / initContainers — avoid Docker Hub (rate limits on OpenShift)
+jobImages:
+  # oc + curl available
+  cli: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+  # python for boto3 bucket bootstrap / pipeline upload
+  python: registry.redhat.io/ubi9/python-311:latest
+  # lightweight shell for PVC waits
+  shell: registry.redhat.io/ubi9/ubi-minimal:latest
+
 # OpenShift-specific features
 openshift:
   enabled: true
@@ -27,82 +36,47 @@ serviceAccount:
 
 fullnameOverride: "lakefs"
 
-# MinIO configuration (subchart) - OpenShift overrides
-minio:
+# aws-compatible-storage (S4-backed) from ai-architecture-charts — values key is "s4" via Chart alias
+# Runtime: quay.io/rh-aiservices-bu/s4 — S3 API :7480, Web UI :5000
+# Chart: https://github.com/rh-ai-quickstart/ai-architecture-charts/tree/main/aws-compatible-storage
+s4:
   enabled: true
-  
+  fullnameOverride: s4
   image:
-    repository: quay.io/minio/minio
-    tag: latest
+    repository: quay.io/rh-aiservices-bu/s4
+    tag: "0.3.2"
     pullPolicy: IfNotPresent
-  
-  service:
-    type: ClusterIP
-    port: 9090
-    apiPort: 9000
-  
-  volumeClaimTemplates:
-    - metadata:
-        name: minio-data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 10Gi
-  
-  volumeMounts:
-    - mountPath: /data
-      name: minio-data
-  
-  resources:
-    limits:
-      cpu: "2"
-      memory: 2Gi
-    requests:
-      cpu: 200m
-      memory: 1Gi
-  
-  secret:
-    name: pipeline-artifacts
-    secret_key: something
-    secret_access_key: simple
-    endpoint: https://lakefs-fraud-detection.apps.ai-dev02.kni.syseng.devcluster.openshift.com
-    defaultBucket: my-storage
-    # Override for subchart
-    user: minio_user
-    password: minio_password
-  
-  openshift:
+  s3:
+    accessKeyId: s4admin
+    secretAccessKey: s4secret
+  auth:
     enabled: true
-    routes:
-      enabled: true
-      tls:
-        termination: edge
-        insecureEdgeTerminationPolicy: Redirect
-  
-  # Bucket creation configuration
-  buckets:
-    create: true
-    names:
-      - pipeline-artifacts
-      - my-storage
-      - quickstart
-  
-  # ServiceAccount for jobs (needed for bucket creation)
-  serviceAccount:
-    create: false  # We'll use the main chart's ServiceAccount
-    name: demo-setup
-  
-  rbac:
-    create: true
+    username: admin
+    password: changeme
+  route:
+    enabled: true
+    s3Api:
+      enabled: false
+  storage:
+    data:
+      size: 10Gi
+
+# Parent chart Job: create S3 buckets (not part of the aws-compatible-storage subchart)
+s4Buckets:
+  create: true
+  names:
+    - pipeline-artifacts
+    - my-storage
+    - quickstart
+  serviceAccountName: demo-setup
 
 # lakeFS configuration
 lakefs:
   replicaCount: 1
 
   secret:
-    name: ""  # Defaults to minio fullname
-    secret_key:  something
+    name: ""
+    secret_key: something
     secret_access_key: simple
     endpoint: http://lakefs
 
@@ -151,10 +125,10 @@ lakefs:
     blockstore:
       type: s3
       s3:
-        endpoint: http://minio:9000
+        endpoint: http://s4:7480
         forcePathStyle: true
         discoverBucketRegion: false
-        region: ""
+        region: us-east-1
   
   # lakeFS admin credentials for initial setup and API access
   adminCredentials:
@@ -214,15 +188,16 @@ notebook:
   lakefs:
     url: "http://lakefs"
   
-  # MinIO connection information  
-  minio:
-    endpoint: "http://minio:9000"
-    defaultBucket: "my-storage"  # Default bucket for data connections
+  # S4 (S3 API) connection for OpenShift AI data connection Secret
+  s4:
+    endpoint: "http://s4:7480"
+    defaultBucket: "pipeline-artifacts"
+    region: us-east-1
   
   # OpenShift AI specific settings
   openshiftAI:
     dataConnections:
-      enabled: true  # Create OpenShift AI data connections for MinIO and lakeFS
+      enabled: true  # Create OpenShift AI data connections for S4 and lakeFS
   
   # Git sync to automatically clone notebooks
   gitSync:
@@ -257,8 +232,8 @@ ui:
   lakefs:
     url: "http://lakefs"
 
-  minio:
-    endpoint: "http://minio:9000"
+  s4:
+    endpoint: "http://s4:7480"
 
   inference:
     # Defaults to in-cluster KServe/OpenShift AI predictor for the release namespace.
@@ -268,8 +243,10 @@ ui:
     port: 80
 
   modelRegistry:
-    url: "http://lakefs-model-registry.rhoai-model-registries.svc:8080"
-    name: lakefs-model-registry
+    # Existing OpenShift AI Model Registry on this cluster.
+    # Use the Route: NetworkPolicies often block cross-ns svc:8443 traffic.
+    url: "https://ryans-model-registry-rest.apps.ai-dev02.kni.syseng.devcluster.openshift.com"
+    name: ryans-model-registry
 
   deploy:
     namespace: ""
@@ -366,8 +343,9 @@ dataSciencePipelines:
         memory: 1Gi
   objectStorage:
     bucket: pipeline-artifacts
-    host: minio.fraud-detection.svc.cluster.local
-    port: "9000"
+    # DSPA operator probes object storage from outside the release namespace — use FQDN
+    host: s4.fraud-detection.svc.cluster.local
+    port: "7480"
     scheme: http
     s3CredentialsSecret:
       secretName: pipeline-artifacts
@@ -375,8 +353,8 @@ dataSciencePipelines:
       secretKey: AWS_SECRET_ACCESS_KEY
 
 # Model Registry configuration
-modelRegistry: # disabled here; the fraud-detection-admin chart now deploys the Model Registry in rhoai-model-registries.
+modelRegistry: # disabled here; Studio uses ui.modelRegistry against an existing OpenShift AI registry.
   enabled: false
   createService: false
-  name: lakefs-model-registry
+  name: ryans-model-registry
   namespace: rhoai-model-registries

@@ -61,16 +61,32 @@ spec:
           value: {{ .Values.lakefs.secret.notebook_access_key_id }}
         - name: LAKECTL_CREDENTIALS_SECRET_ACCESS_KEY
           value: {{ .Values.lakefs.secret.notebook_secret_access_key }}
+        # lakeFS S3 gateway (versioned repo access via lakeFS, not raw object store)
         - name: AWS_ACCESS_KEY_ID
-          value: {{ .Values.minio.secret.secret_key }}
+          value: {{ .Values.lakefs.secret.notebook_access_key_id }}
         - name: AWS_SECRET_ACCESS_KEY
-          value: {{ .Values.minio.secret.secret_access_key }}
+          value: {{ .Values.lakefs.secret.notebook_secret_access_key }}
         - name: AWS_S3_ENDPOINT
-          value: {{ .Values.minio.secret.endpoint }}
+          value: {{ .Values.lakefs.secret.endpoint }}
         - name: AWS_DEFAULT_REGION
-          value: {{ .Values.minio.secret.default_region | default "us-east-1" }}
+          value: {{ .Values.lakefs.secret.default_region | default "us-east-1" }}
         - name: AWS_S3_BUCKET
-          value: {{ .Values.minio.secret.defaultBucket }}
+          value: {{ .Values.lakefs.secret.repo_name }}
+        # Direct S4 (S3 API) for pipeline artifacts / blockstore-adjacent tools
+        - name: PIPELINE_ARTIFACTS_ENDPOINT_URL
+          value: {{ .Values.notebook.s4.endpoint | quote }}
+        - name: PIPELINE_ARTIFACTS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "s4.secretName" . }}
+              key: AWS_ACCESS_KEY_ID
+        - name: PIPELINE_ARTIFACTS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "s4.secretName" . }}
+              key: AWS_SECRET_ACCESS_KEY
+        - name: PIPELINE_ARTIFACTS_S3_BUCKET
+          value: {{ .Values.notebook.s4.defaultBucket | default "pipeline-artifacts" | quote }}
         ports:
         - containerPort: 8888
           name: notebook-port

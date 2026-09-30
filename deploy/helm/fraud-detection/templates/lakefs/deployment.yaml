@@ -20,20 +20,20 @@ spec:
         {{- include "lakefs.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "lakefs.fullname" . }}
-      {{- if .Values.minio.enabled }}
+      {{- if .Values.s4.enabled }}
       initContainers:
-        - name: wait-for-minio
-          image: curlimages/curl:latest
+        - name: wait-for-s4
+          image: {{ $.Values.jobImages.cli | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
           command:
             - /bin/sh
             - -c
             - |
-              echo "Waiting for MinIO to be ready..."
-              until curl -sf http://{{ include "minio.fullname" . }}:9000/minio/health/live; do
+              echo "Waiting for S4 to be ready..."
+              until curl -sf http://{{ include "s4.fullname" . }}:{{ include "s4.uiPort" . }}/api; do
                 echo -n "."
                 sleep 5
               done
-              echo "MinIO is ready!"
+              echo "S4 is ready!"
       {{- end }}
       containers:
         - name: lakefs
@@ -48,17 +48,17 @@ spec:
               containerPort: {{ .Values.lakefs.service.port | default 8000 }}
               protocol: TCP
           env:
-            {{- if .Values.minio.enabled }}
+            {{- if .Values.s4.enabled }}
             - name: LAKEFS_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "minio.secretName" . }}
-                  key: user
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_ACCESS_KEY_ID
             - name: LAKEFS_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "minio.secretName" . }}
-                  key: password
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_SECRET_ACCESS_KEY
             {{- end }}
           volumeMounts:
             - name: config
@@ -87,4 +87,3 @@ spec:
             name: {{ include "lakefs.fullname" . }}
         - name: data
           emptyDir: {}
-

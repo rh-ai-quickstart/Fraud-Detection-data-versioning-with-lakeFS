@@ -58,11 +58,11 @@ class EnvironmentConfigService:
             pipeline_artifacts_endpoint_url=os.getenv("PIPELINE_ARTIFACTS_ENDPOINT_URL", os.getenv("AWS_S3_ENDPOINT", "")),
             pipeline_artifacts_access_key_id=os.getenv(
                 "PIPELINE_ARTIFACTS_ACCESS_KEY_ID",
-                os.getenv("MINIO_ACCESS_KEY", os.getenv("AWS_ACCESS_KEY_ID", "")),
+                os.getenv("AWS_ACCESS_KEY_ID", ""),
             ),
             pipeline_artifacts_secret_access_key=os.getenv(
                 "PIPELINE_ARTIFACTS_SECRET_ACCESS_KEY",
-                os.getenv("MINIO_SECRET_KEY", os.getenv("AWS_SECRET_ACCESS_KEY", "")),
+                os.getenv("AWS_SECRET_ACCESS_KEY", ""),
             ),
             pipeline_artifacts_s3_bucket=os.getenv("PIPELINE_ARTIFACTS_S3_BUCKET", "pipeline-artifacts"),
         )

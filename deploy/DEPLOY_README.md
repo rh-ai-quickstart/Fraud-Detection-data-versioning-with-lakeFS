@@ -7,7 +7,7 @@ The deployment uses **two Helm charts**:
 | Chart | Directory | Namespace | Requires | Deploys |
 |-------|-----------|-----------|----------|---------|
 | `fraud-detection-admin` | `helm/fraud-detection-admin` | `rhoai-model-registries` | **cluster-admin** | PostgreSQL, Model Registry, DSC patch, RBAC |
-| `fraud-detection` | `helm/fraud-detection` | `fraud-detection` | namespace **admin** | lakeFS, MinIO, Jupyter notebook, Data Science Pipeline Server |
+| `fraud-detection` | `helm/fraud-detection` | `fraud-detection` | namespace **admin** | lakeFS, S4, Jupyter notebook, Data Science Pipeline Server |
 
 ## Prerequisites
 
@@ -105,14 +105,14 @@ This command will:
 #### User Chart Only
 
 ```bash
-# Deploy lakeFS, MinIO, notebooks, pipelines (namespace admin)
+# Deploy lakeFS, S4, notebooks, pipelines (namespace admin)
 make deploy
 ```
 
 This command will:
 1. Create the namespace as an OpenShift project (or Kubernetes namespace)
 2. Install the Helm chart with appropriate values for your platform
-3. Run post-install hooks to create MinIO buckets, lakeFS repositories, and upload the pipeline
+3. Create S4 buckets (regular Job during install), then run post-install hooks for lakeFS repositories and pipeline upload
 4. Wait for all resources to be ready (up to 10 minutes by default)
 
 #### Clean Installation
@@ -174,8 +174,8 @@ Monitor logs from specific components:
 # View lakeFS logs (follows log output)
 make logs-lakefs
 
-# View MinIO logs
-make logs-minio
+# View S4 logs
+make logs-s4
 
 # View Jupyter notebook logs
 make logs-notebook
@@ -255,7 +255,7 @@ make describe
 
 # Check component logs
 make logs-lakefs
-make logs-minio
+make logs-s4
 make logs-notebook
 
 # Check admin chart pods
@@ -281,11 +281,11 @@ This will uninstall both Helm releases and prompt for confirmation before deleti
 | Component | Description | Default State |
 |-----------|-------------|---------------|
 | **lakeFS** | Data version control system with S3-compatible API | Enabled |
-| **MinIO** | S3-compatible object storage backend | Enabled |
+| **aws-compatible-storage (S4)** | S3-compatible object storage via [ai-architecture-charts/aws-compatible-storage](https://github.com/rh-ai-quickstart/ai-architecture-charts/tree/main/aws-compatible-storage) (S4 runtime) | Enabled |
 | **Jupyter Notebook** | Interactive notebooks for running the fraud detection demo | Enabled |
 | **Data Science Pipeline Server** | OpenShift AI pipeline server for ML workflows | Enabled |
 | **RBAC** | ServiceAccounts and RoleBindings for proper permissions | Enabled |
-| **Post-install hooks** | Automated setup of MinIO buckets, lakeFS repositories, and pipeline upload | Enabled |
+| **Bootstrap + hooks** | Regular Job for S4 buckets; post-install hooks for lakeFS repositories and pipeline upload | Enabled |
 
 ### Admin Chart (`fraud-detection-admin`)
 
@@ -377,8 +377,9 @@ dataSciencePipelines:
         memory: 1Gi
   objectStorage:
     bucket: pipeline-artifacts
-    host: minio.fraud-detection.svc.cluster.local
-    port: "9000"
+    # DSPA probes from outside the release namespace — use FQDN
+    host: s4.fraud-detection.svc.cluster.local
+    port: "7480"
     scheme: http
     s3CredentialsSecret:
       secretName: pipeline-artifacts
@@ -395,8 +396,8 @@ dataSciencePipelines:
 | `uploadPipelineName` | Display name for the uploaded pipeline | `7-get-data-train-upload-lakefs` |
 | `database.name` | Pipeline database name | `mlpipeline` |
 | `objectStorage.bucket` | S3 bucket for pipeline artifacts | `pipeline-artifacts` |
-| `objectStorage.host` | S3-compatible storage host | `minio.fraud-detection.svc.cluster.local` |
-| `objectStorage.port` | Storage port | `9000` |
+| `objectStorage.host` | S3-compatible storage host (FQDN for DSPA) | `s4.<namespace>.svc.cluster.local` |
+| `objectStorage.port` | Storage port | `7480` |
 
 #### DSPA Components
 
@@ -445,33 +446,60 @@ run = client.create_run_from_pipeline_func(
 
 For detailed pipeline examples, see [demo/pipelines/PipelinesReadMe.md](../demo/pipelines/PipelinesReadMe.md).
 
-### MinIO Object Storage
+### Object storage (aws-compatible-storage / S4)
 
-MinIO provides S3-compatible object storage for:
-- Training data
-- Model artifacts
-- Pipeline artifacts
+Object storage is the shared [aws-compatible-storage](https://github.com/rh-ai-quickstart/ai-architecture-charts/tree/main/aws-compatible-storage) Helm chart from ai-architecture-charts, backed by [S4](https://github.com/rh-aiservices-bu/s4). The chart is aliased as `s4` in values so the in-cluster DNS stays `http://s4:7480`.
 
-#### Configuration
+Used for:
+
+- lakeFS blockstore (physical bytes behind versioned repos)
+- Data Science Pipelines artifacts (`pipeline-artifacts` bucket)
+- Demo buckets (`my-storage`, `quickstart`)
 
 ```yaml
-minio:
+# Values key "s4" is the Chart.yaml alias for dependency "aws-compatible-storage"
+s4:
   enabled: true
-  buckets:
-    create: true
-    names:
-      - pipeline-artifacts
-      - my-storage
-      - quickstart
-```
+  fullnameOverride: s4
+  s3:
+    accessKeyId: s4admin
+    secretAccessKey: s4secret
+  auth:
+    enabled: true
+    username: admin
+    password: changeme
+  route:
+    enabled: true
+    s3Api:
+      enabled: false
+  storage:
+    data:
+      size: 10Gi
 
-#### Default Buckets
+# Parent chart creates buckets (regular Job — not a Helm hook)
+s4Buckets:
+  create: true
+  names:
+    - pipeline-artifacts
+    - my-storage
+    - quickstart
+```
 
 | Bucket | Purpose |
 |--------|---------|
 | `pipeline-artifacts` | Stores DSPA pipeline artifacts and intermediate outputs |
-| `my-storage` | Default bucket for notebook data connections |
-| `quickstart` | lakeFS repository storage namespace |
+| `my-storage` | lakeFS repository storage namespace |
+| `quickstart` | Sample lakeFS repository with demo data |
+
+| Concern | Value |
+|---------|-------|
+| In-cluster S3 API | `http://s4:7480` |
+| DSPA FQDN | `s4.<namespace>.svc.cluster.local:7480` |
+| Credentials Secret | `s4-credentials` (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) |
+| UI Route | `s4` (port 5000 / `/api`) |
+| S3 API Route | disabled (`route.s3Api.enabled: false`); name would be `s4-api` if enabled |
+| Auth (UI) | `admin` / `changeme` (override in secrets overlay) |
+
 
 ## Common Issues
 
@@ -505,7 +533,7 @@ make get-pods
 
 # View logs for specific component
 make logs-lakefs
-make logs-minio
+make logs-s4
 make logs-notebook
 
 # View PostgreSQL logs in the admin namespace
@@ -539,7 +567,7 @@ oc logs -n rhoai-model-registries -l app=model-registry-db --tail=100
    ```bash
    oc get dspa -n fraud-detection
    ```
-2. Verify the `pipeline-artifacts` bucket exists in MinIO
+2. Verify the `pipeline-artifacts` bucket exists in S4
 3. Check MariaDB pod status:
    ```bash
    oc get pods -n fraud-detection | grep mariadb

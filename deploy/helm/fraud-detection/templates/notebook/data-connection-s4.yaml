@@ -14,10 +14,9 @@ metadata:
     openshift.io/display-name: "pipeline-artifacts"
 type: Opaque
 stringData:
-  AWS_ACCESS_KEY_ID: {{ .Values.minio.secret.user | quote }}
-  AWS_SECRET_ACCESS_KEY: {{ .Values.minio.secret.password | quote }}
-  AWS_S3_ENDPOINT: {{ .Values.minio.secret.endpoint | quote }}
-  AWS_DEFAULT_REGION: "us-east-1"
-  AWS_S3_BUCKET: {{ .Values.minio.secret.defaultBucket | default "pipeline-artifacts" | quote }}
+  AWS_ACCESS_KEY_ID: {{ .Values.s4.s3.accessKeyId | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.s4.s3.secretAccessKey | quote }}
+  AWS_S3_ENDPOINT: {{ .Values.notebook.s4.endpoint | quote }}
+  AWS_DEFAULT_REGION: {{ .Values.notebook.s4.region | default "us-east-1" | quote }}
+  AWS_S3_BUCKET: {{ .Values.notebook.s4.defaultBucket | default "pipeline-artifacts" | quote }}
 {{- end }}
-

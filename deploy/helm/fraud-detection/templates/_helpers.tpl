@@ -90,18 +90,32 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-MinIO fullname
+aws-compatible-storage (S4) fullname — matches alias "s4" + fullnameOverride: s4
+Parent helpers: subchart templates use aws-compatible-storage.* with the subchart context.
 */}}
-{{- define "minio.fullname" -}}
-minio
+{{- define "s4.fullname" -}}
+s4
 {{- end }}
 
 {{/*
-MinIO secret name - for use in parent chart templates
-The published ai-architecture-charts MinIO creates a secret named "minio" (hardcoded)
+Credentials Secret — aws-compatible-storage creates {fullname}-credentials with AWS_* keys
 */}}
-{{- define "minio.secretName" -}}
-minio
+{{- define "s4.secretName" -}}
+{{- printf "%s-credentials" (include "s4.fullname" .) }}
+{{- end }}
+
+{{/*
+S3 API port (aws-compatible-storage / S4)
+*/}}
+{{- define "s4.apiPort" -}}
+7480
+{{- end }}
+
+{{/*
+Web UI port (readiness probe path /api)
+*/}}
+{{- define "s4.uiPort" -}}
+5000
 {{- end }}
 
 {{/*

@@ -1,42 +1,46 @@
-{{- if and .Values.minio.enabled .Values.minio.buckets.create }}
+{{- if and .Values.s4.enabled .Values.s4Buckets.create }}
+{{/*
+Regular Job (not a Helm hook). Helm --wait runs BEFORE post-install hooks, and DSPA
+stays unready until the pipeline-artifacts bucket exists — so bucket creation must be
+part of the release resources that run during install, not a post-install hook.
+*/}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Release.Name }}-minio-create-buckets
+  name: {{ .Release.Name }}-s4-create-buckets
   labels:
     {{- include "fraud-detection.labels" . | nindent 4 }}
-    app.kubernetes.io/component: minio
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "3"
+    app.kubernetes.io/component: s4
 spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
         {{- include "fraud-detection.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: minio
+        app.kubernetes.io/component: s4
     spec:
-      restartPolicy: Never
-      serviceAccountName: {{ .Values.minio.serviceAccount.name | default "default" }}
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.s4Buckets.serviceAccountName | default "default" }}
       initContainers:
-        - name: wait-for-minio
-          image: curlimages/curl:latest
+        - name: wait-for-s4
+          image: {{ .Values.jobImages.cli | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
           args:
             - -c
             - |-
-              echo "Waiting for MinIO to be ready..."
-              until curl -sf http://{{ include "minio.fullname" . }}:{{ .Values.minio.service.apiPort }}/minio/health/live; do
+              echo "Waiting for S4 to be ready..."
+              until curl -sf http://{{ include "s4.fullname" . }}:{{ include "s4.uiPort" . }}/api; do
                 echo -n "."
                 sleep 5
               done
-              echo "MinIO is ready!"
-              sleep 10
+              echo "S4 is ready!"
+              sleep 5
       containers:
         - name: create-buckets
-          image: python:3.11-slim
+          image: {{ .Values.jobImages.python | default "registry.redhat.io/ubi9/python-311:latest" }}
           imagePullPolicy: IfNotPresent
           command:
             - /bin/bash
@@ -44,20 +48,35 @@ spec:
             - -ec
             - |-
               echo "Installing boto3..."
-              pip install --user --no-cache-dir -q boto3
+              pip install --no-cache-dir -q boto3
               
               echo "Creating buckets..."
               python3 << 'EOF'
-              import boto3, os, sys
+              import boto3, os, sys, time
+
+              endpoint = "http://{{ include "s4.fullname" . }}:{{ include "s4.apiPort" . }}"
+              s3 = boto3.client(
+                  "s3",
+                  endpoint_url=endpoint,
+                  aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                  aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                  region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+              )
+
+              existing_buckets = None
+              for attempt in range(1, 31):
+                  try:
+                      existing_buckets = [bu["Name"] for bu in s3.list_buckets()["Buckets"]]
+                      break
+                  except Exception as e:
+                      print(f"list_buckets attempt {attempt}/30 failed: {e}")
+                      time.sleep(5)
+              if existing_buckets is None:
+                  print("S3 API not ready after retries", file=sys.stderr)
+                  sys.exit(1)
 
               try:
-                s3 = boto3.client("s3",
-                                  endpoint_url="http://{{ include "minio.fullname" . }}:{{ .Values.minio.service.apiPort }}",
-                                  aws_access_key_id=os.getenv("MINIO_USER"),
-                                  aws_secret_access_key=os.getenv("MINIO_PASSWORD"))
-                
-                existing_buckets = [bu["Name"] for bu in s3.list_buckets()["Buckets"]]
-                {{- range .Values.minio.buckets.names }}
+                {{- range .Values.s4Buckets.names }}
                 bucket = '{{ . }}'
                 if bucket not in existing_buckets:
                   print(f'Creating bucket: {bucket}')
@@ -74,15 +93,16 @@ spec:
           env:
             - name: HOME
               value: /tmp
-            - name: MINIO_USER
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "minio.secretName" . }}
-                  key: user
-            - name: MINIO_PASSWORD
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "minio.secretName" . }}
-                  key: password
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_SECRET_ACCESS_KEY
 {{- end }}
-

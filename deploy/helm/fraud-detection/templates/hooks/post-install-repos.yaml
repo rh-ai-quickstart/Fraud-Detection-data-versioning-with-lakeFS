@@ -1,48 +1,66 @@
 {{- if .Values.repositories.create }}
+{{/*
+Regular Job (not a Helm hook) so repos are created during install while --wait is
+active. Depends on S4 buckets existing (see s4-create-buckets Job).
+*/}}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "lakefs.fullname" . }}-create-repos
   labels:
     {{- include "lakefs.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "5"
-    # "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
         {{- include "lakefs.selectorLabels" . | nindent 8 }}
     spec:
-      restartPolicy: Never
+      restartPolicy: OnFailure
       serviceAccountName: {{ .Values.serviceAccount.name | default "default" }}
       containers:
         - name: create-repos
-          image: curlimages/curl:latest
+          image: {{ .Values.jobImages.cli | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
           command:
             - /bin/sh
             - -c
             - |
               # Wait for lakeFS to be ready
               echo "Waiting for lakeFS service to be ready..."
-              while ! curl -s http://{{ include "lakefs.fullname" . }}:80/_health; do
+              while ! curl -sf http://{{ include "lakefs.fullname" . }}/_health; do
                 echo -n "."
                 sleep 5
               done
               echo "lakeFS is ready!"
               echo
+
+              # Wait for S4 buckets (create-repos storage namespaces)
+              echo "Waiting for S4 S3 API..."
+              until curl -sf -o /dev/null -w "%{http_code}" http://{{ include "s4.fullname" . }}:{{ include "s4.uiPort" . }}/api | grep -qE '200|401|403'; do
+                echo -n "."
+                sleep 5
+              done
+              echo "S4 is reachable."
               
               {{- range .Values.repositories.repos }}
               # Create {{ .name }} repository
               echo "Creating {{ .name }} repository..."
-              curl -u "{{ $.Values.lakefs.adminCredentials.accessKeyId }}:{{ $.Values.lakefs.adminCredentials.secretAccessKey }}" \
+              HTTP_CODE=$(curl -s -o /tmp/repo-{{ .name }}.out -w "%{http_code}" \
+                   -u "{{ $.Values.lakefs.adminCredentials.accessKeyId }}:{{ $.Values.lakefs.adminCredentials.secretAccessKey }}" \
                    -X POST \
                    -H "Content-Type: application/json" \
                    -d '{"name": "{{ .name }}", "storage_namespace": "{{ .storageNamespace }}", "default_branch": "{{ .defaultBranch }}"{{ if .sampleData }}, "sample_data": true{{ end }}}' \
-                   http://{{ include "lakefs.fullname" $ }}:80/api/v1/repositories || true
-              echo "{{ .name }} repository created!"
+                   http://{{ include "lakefs.fullname" $ }}/api/v1/repositories || true)
+              echo "HTTP ${HTTP_CODE}"
+              cat /tmp/repo-{{ .name }}.out || true
+              echo
+              # 201 created, 409 already exists — both OK
+              if [ "${HTTP_CODE}" != "201" ] && [ "${HTTP_CODE}" != "409" ]; then
+                echo "WARNING: unexpected status creating {{ .name }}: ${HTTP_CODE}"
+              else
+                echo "{{ .name }} repository ready!"
+              fi
               echo
               {{- end }}
 {{- end }}
-

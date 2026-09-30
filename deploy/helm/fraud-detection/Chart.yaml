@@ -1,12 +1,14 @@
 apiVersion: v2
 name: fraud-detection-openshift
-description: Fraud Detection with LakeFS, MinIO, and PostgreSQL for data versioning and model registry
+description: Fraud Detection with LakeFS, aws-compatible-storage (S4), and PostgreSQL for data versioning and model registry
 type: application
 version: 1.2.0
 appVersion: "1.2"
 keywords:
   - lakefs
-  - minio
+  - s4
+  - s3
+  - aws-compatible-storage
   - postgresql
   - postgres
   - fraud-detection
@@ -19,8 +21,8 @@ home: https://github.com/rh-ai-quickstart/Fraud-Detection-data-versioning-with-l
 maintainers:
   - name: Red Hat AI Quickstart Team
 dependencies:
-  - name: minio
-    version: 0.5.2
-    repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
-    condition: minio.enabled
-
+  - name: aws-compatible-storage
+    alias: s4
+    version: 0.1.0
+    repository: "https://rh-ai-quickstart.github.io/ai-architecture-charts"
+    condition: s4.enabled
