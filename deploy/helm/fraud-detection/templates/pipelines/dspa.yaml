@@ -22,8 +22,8 @@ spec:
   objectStorage:
     externalStorage:
       bucket: {{ .Values.dataSciencePipelines.objectStorage.bucket | default "pipeline-artifacts" }}
-      host: {{ .Values.dataSciencePipelines.objectStorage.host | default "minio" }}
-      port: {{ .Values.dataSciencePipelines.objectStorage.port | default "" | quote }}
+      host: {{ .Values.dataSciencePipelines.objectStorage.host | default (printf "s4.%s.svc.cluster.local" .Release.Namespace) }}
+      port: {{ .Values.dataSciencePipelines.objectStorage.port | default "7480" | quote }}
       s3CredentialsSecret:
         accessKey: {{ .Values.dataSciencePipelines.objectStorage.s3CredentialsSecret.accessKey | default "AWS_ACCESS_KEY_ID" }}
         secretKey: {{ .Values.dataSciencePipelines.objectStorage.s3CredentialsSecret.secretKey | default "AWS_SECRET_ACCESS_KEY" }}

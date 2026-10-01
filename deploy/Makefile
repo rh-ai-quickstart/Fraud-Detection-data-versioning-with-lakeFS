@@ -120,7 +120,7 @@ get-ui-route: ## Get Notebook Studio UI route URL (OpenShift only)
 	fi
 
 .PHONY: deploy
-deploy: ## Deploy the fraud-detection Helm chart (MinIO, lakeFS, notebooks, pipelines)
+deploy: ## Deploy the fraud-detection Helm chart (S4, lakeFS, notebooks, pipelines)
 	@echo "Installing $(RELEASE_NAME) in namespace $(NAMESPACE)..."
 	@oc new-project $(NAMESPACE) || echo "Project $(NAMESPACE) already exists"
 	@if [ "$(PLATFORM)" = "openshift" ]; then \
@@ -180,9 +180,9 @@ describe: ## Describe all resources in the namespace
 logs-lakefs: ## Show lakeFS logs
 	@$(KUBECTL) logs -n $(NAMESPACE) -l app.kubernetes.io/component=lakefs --tail=100 -f
 
-.PHONY: logs-minio
-logs-minio: ## Show MinIO logs
-	@$(KUBECTL) logs -n $(NAMESPACE) -l app.kubernetes.io/component=minio --tail=100 -f
+.PHONY: logs-s4
+logs-s4: ## Show aws-compatible-storage / S4 logs
+	@$(KUBECTL) logs -n $(NAMESPACE) -l 'app=s4' --tail=100 -f
 
 .PHONY: logs-notebook
 logs-notebook: ## Show Jupyter notebook logs

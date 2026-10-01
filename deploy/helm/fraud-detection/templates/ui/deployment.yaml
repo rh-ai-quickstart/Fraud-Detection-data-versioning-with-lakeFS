@@ -30,7 +30,7 @@ spec:
       {{- if .Values.ui.waitForLakeFS | default true }}
       initContainers:
         - name: wait-for-lakefs
-          image: curlimages/curl:latest
+          image: {{ .Values.jobImages.cli | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
           command:
             - /bin/sh
             - -c
@@ -74,11 +74,17 @@ spec:
             - name: AWS_S3_BUCKET
               value: {{ .Values.lakefs.secret.repo_name | quote }}
             - name: PIPELINE_ARTIFACTS_ENDPOINT_URL
-              value: {{ .Values.ui.minio.endpoint | default .Values.notebook.minio.endpoint | quote }}
+              value: {{ .Values.ui.s4.endpoint | default .Values.notebook.s4.endpoint | quote }}
             - name: PIPELINE_ARTIFACTS_ACCESS_KEY_ID
-              value: {{ .Values.minio.secret.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_ACCESS_KEY_ID
             - name: PIPELINE_ARTIFACTS_SECRET_ACCESS_KEY
-              value: {{ .Values.minio.secret.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "s4.secretName" . }}
+                  key: AWS_SECRET_ACCESS_KEY
             - name: PIPELINE_ARTIFACTS_S3_BUCKET
               value: pipeline-artifacts
             {{- $inferUrl := .Values.ui.inference.url -}}

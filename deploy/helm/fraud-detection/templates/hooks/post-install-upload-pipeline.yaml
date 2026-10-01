@@ -22,7 +22,7 @@ spec:
       serviceAccountName: {{ include "fraud-detection.serviceAccountName" . }}
       initContainers:
         - name: wait-for-pipeline-api
-          image: curlimages/curl:latest
+          image: {{ .Values.jobImages.cli | default "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest" }}
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -46,7 +46,7 @@ spec:
               exit 1
       containers:
         - name: upload-pipeline
-          image: python:3.11-slim
+          image: {{ .Values.jobImages.python | default "registry.redhat.io/ubi9/python-311:latest" }}
           imagePullPolicy: IfNotPresent
           command:
             - /bin/bash

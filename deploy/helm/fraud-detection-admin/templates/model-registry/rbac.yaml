@@ -4,7 +4,9 @@
 {{- $projects := $access.projects | default list }}
 {{- $registryName := .Values.modelRegistry.name | default "model-registry" }}
 {{- $registryNS   := .Values.modelRegistry.namespace | default .Release.Namespace }}
-{{- $needsAccess := and .Values.modelRegistry.enabled (or (gt (len $users) 0) (gt (len $groups) 0) (gt (len $projects) 0)) }}
+{{- $hasSubjects := or (gt (len $users) 0) (gt (len $groups) 0) (gt (len $projects) 0) }}
+{{- $grantAccess := or .Values.modelRegistry.enabled (.Values.modelRegistry.grantAccess | default false) }}
+{{- $needsAccess := and $grantAccess $hasSubjects }}
 {{- if $needsAccess }}
 ---
 # ── ServiceAccount for the RBAC setup Job ────────────────────────────

@@ -45,18 +45,20 @@ openshift:
 
 # ── Model Registry (OpenShift AI / RHODS) ──────────────────────────────
 modelRegistry:
-  enabled: true
-  name: lakefs-model-registry
+  # Reuse the existing OpenShift AI Model Registry on this cluster.
+  # Set enabled: true only if you need the chart to create a new ModelRegistry CR.
+  enabled: false
+  # Grant RBAC for access.projects/users even when enabled=false (existing registry).
+  grantAccess: true
+  name: ryans-model-registry
   namespace: rhoai-model-registries
   grpcPort: 9090
   restPort: 8080
 
-  # Users / groups / projects that should see the registry in the
-  # OpenShift AI dashboard.  A post-install Job waits for the operator to
-  # create the auto-generated group, then adds them.
+  # Users / groups / projects that should access the registry.
+  # Project entries bind system:serviceaccounts:<project> to registry-user-<name>.
   access:
-    users:
-      - user1
+    users: []
     groups: []
     projects:
       - fraud-detection

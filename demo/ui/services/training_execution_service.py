@@ -110,6 +110,16 @@ class TrainingExecutionService:
             model = self._build_model(len(self.FEATURE_INDEXES))
             log("Starting model training...")
             start = time.time()
+
+            class _EpochProgressCallback(tf.keras.callbacks.Callback):
+                def on_epoch_end(self, epoch, epoch_logs=None):  # type: ignore[override]
+                    metrics = epoch_logs or {}
+                    parts = [f"Epoch {epoch + 1}/{plan.epochs}"]
+                    for key in ("loss", "accuracy", "val_loss", "val_accuracy"):
+                        if key in metrics:
+                            parts.append(f"{key}={metrics[key]:.4f}")
+                    log(" | ".join(parts))
+
             model.fit(
                 x_train,
                 y_train,
@@ -117,6 +127,7 @@ class TrainingExecutionService:
                 validation_data=(x_val, y_val),
                 verbose=0,
                 class_weight=class_weights,
+                callbacks=[_EpochProgressCallback()],
             )
             elapsed = time.time() - start
             log(f"Training completed in {elapsed:.1f} seconds.")

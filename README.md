@@ -43,14 +43,12 @@ See a [demo of lakeFS with OpenShift AI](https://drive.google.com/file/d/1sQzVbM
 
 ### Architecture
 
-![lakeFS architecture](docs/images/lakefs-arch.png "Architecture showing the integration of lakeFS with OpenShift and OpenShift AI")
-
 #### Data plane vs control plane
 
 This quickstart intentionally separates responsibilities:
 
 - **Data plane (object storage)**  
-  S3 object storage stores the bytes: datasets, models, and pipeline artifacts.
+  S4 (S3-compatible) stores the bytes: datasets, models, and pipeline artifacts.
 
 - **Control plane (lakeFS)**  
   lakeFS adds Git-like semantics (branch, commit, merge, revert) and lineage metadata *on top of* the data in object storage.
@@ -67,9 +65,9 @@ After running this quickstart you can answer questions including:
 
 #### What you'll do (and what lakeFS adds)
 
-1. Deploy MinIO&reg; (object storage) and lakeFS (S3-compatible versioning gateway)
+1. Deploy S4 (S3-compatible object storage) and lakeFS (versioning gateway)
 2. Configure Red Hat OpenShift AI&reg; to use **lakeFS as its S3 endpoint** (data connection)
-3. Use the **Fraud Detection Workflow Studio** web app user interface to:
+3. Use the **Fraud Detection Workflow Studio** (Streamlit UI) to:
    - validate your lakeFS and OpenShift AI environment
    - load training data from lakeFS and train a fraud model
    - save the model artifact back to lakeFS
@@ -79,6 +77,36 @@ After running this quickstart you can answer questions including:
 5. Write updated training data to the branch, **commit** it, and retrain
 6. Compare results across versions, then **merge** the branch to promote (or revert/discard)
 7. (Optional) Run a pipeline or distributed training job that reads/writes through lakeFS so pipeline outputs are also versioned
+
+### See it in action
+
+See a [demo](https://drive.google.com/file/d/1sQzVbMCIkM2JcT73FmzPLBbtInXs8oZk/view) of lakeFS with OpenShift AI, and the value they bring together.
+
+### Architecture diagrams
+
+```mermaid
+flowchart LR
+  subgraph OAI["Red Hat OpenShift AI"]
+    NB[Notebook / Studio UI]
+    DSPA[Data Science Pipelines]
+  end
+
+  subgraph LF["lakeFS"]
+    LFS3[S3 Gateway]
+    LFUI[UI]
+  end
+
+  subgraph S4Box["S4 — S3-compatible storage"]
+    S3API["S3 API :7480"]
+    S4UI["Web UI :5000"]
+  end
+
+  NB -->|S3 API| LFS3
+  DSPA -->|artifacts| S3API
+  LFS3 -->|blockstore| S3API
+  LFUI -.->|Route| ExtUI[UI Route]
+  S4UI -.->|Route| ExtS4[S4 UI Route]
+```
 
 ## Requirements
 
@@ -106,7 +134,7 @@ This quickstart was tested with the following software versions:
 | OpenShift AI                       | 2.25     |
 | helm                               | 3.17.1   |
 | lakeFS                             | 1.73.0   |
-| MinIO                              | latest   |
+| aws-compatible-storage / S4 (ai-architecture-charts) | 0.1.0 / app 0.3.2 |
 
 ### Required user permissions
 
@@ -114,7 +142,7 @@ The user performing this quickstart should have the ability to create a project 
 | Chart | Required Role | Purpose |
 |-------|--------------|---------|
 | `fraud-detection-admin` | **cluster-admin** | Deploys Model Registry, PostgreSQL, patches DataScienceCluster, sets up RBAC |
-| `fraud-detection` | **admin** (namespace-level) | Deploys lakeFS, MinIO, Workflow Studio UI, Data Science Pipeline Server |
+| `fraud-detection` | **admin** (namespace-level) | Deploys lakeFS, S4, Workflow Studio UI, Data Science Pipeline Server |
 
 > [!NOTE]
 > If you only need the core lakeFS demo without Model Registry, you can skip the admin chart and run `make deploy` alone with namespace-level `admin` permissions.
@@ -176,7 +204,7 @@ make deploy-all
 # Step 1 - Admin chart: PostgreSQL + Model Registry + DSC patch (requires cluster-admin)
 make deploy-admin
 
-# Step 2 - User chart: lakeFS, MinIO, Workflow Studio UI, pipelines (namespace admin)
+# Step 2 - User chart: lakeFS, S4, Workflow Studio UI, pipelines (namespace admin)
 make deploy
 
 # Check deployment status
@@ -186,7 +214,7 @@ make get-pods
 The Makefile will automatically:
 - Detect if you're on OpenShift or Kubernetes
 - Create the namespace (`fraud-detection` by default)
-- Deploy lakeFS, MinIO, the Workflow Studio UI, Model Registry (via the admin chart), and Data Science Pipeline Server
+- Deploy lakeFS, S4, the Workflow Studio UI, Model Registry (via the admin chart), and Data Science Pipeline Server
 - Set up required RBAC and post-install configurations
 
 **Customize deployment** (optional):
@@ -274,7 +302,7 @@ make get-all
 
 # Check specific component logs
 make logs-lakefs
-make logs-minio
+make logs-s4
 make logs-ui
 ```
 

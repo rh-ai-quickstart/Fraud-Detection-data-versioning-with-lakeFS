@@ -64,7 +64,7 @@ The Fraud Detection quickstart includes two types of Data Science Pipelines that
                                                                     │
                                                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        MinIO (Object Storage)                           │
+│                   aws-compatible-storage (S4)                           │
 │   Stores actual bytes for datasets, models, and artifacts               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -79,7 +79,7 @@ The following components must be deployed and running (handled by the Helm chart
 
 - **Data Science Pipeline Server (DSPA)** - Manages pipeline execution
 - **lakeFS** - Provides S3-compatible versioning gateway
-- **MinIO** - Backend object storage
+- **aws-compatible-storage (S4)** - Backend object storage (S3 API on :7480)
 - **JupyterLab Notebook** - For Elyra pipeline development
 
 ### 2. Required Secrets
@@ -220,8 +220,9 @@ dataSciencePipelines:
     name: mlpipeline
   objectStorage:
     bucket: pipeline-artifacts
-    host: minio.fraud-detection.svc.cluster.local
-    port: "9000"
+    # DSPA probes from outside the release namespace — use FQDN
+    host: s4.fraud-detection.svc.cluster.local
+    port: "7480"
     scheme: http
     s3CredentialsSecret:
       secretName: pipeline-artifacts
@@ -368,7 +369,7 @@ oc logs -n fraud-detection -l app=ds-pipeline-server
 
 - Ensure `dataSciencePipelines.enabled: true` in Helm values
 - Check that required secrets exist
-- Verify MinIO is running and accessible
+- Verify S4 is running and accessible (`http://s4:7480`)
 
 ### lakeFS Connection Issues
 

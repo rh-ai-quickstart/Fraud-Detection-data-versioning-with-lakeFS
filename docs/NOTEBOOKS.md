@@ -71,7 +71,7 @@ Verifies that your environment is properly configured before running other noteb
 
 - Python environment and package availability
 - lakeFS connection and credentials
-- S3/MinIO connectivity
+- S3/S4 connectivity
 - Required environment variables
 
 #### Usage
